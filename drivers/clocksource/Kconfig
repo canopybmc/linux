@@ -793,4 +793,9 @@ config RTK_SYSTIMER
 	  this option only when building for a Realtek platform or for compilation
 	  testing.
 
+config GXP_TIMER
+	bool "GXP timer driver"
+	depends on ARCH_HPE
+	default y
+
 endmenu

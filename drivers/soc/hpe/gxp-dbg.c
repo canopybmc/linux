@@ -15,6 +15,7 @@
 #include <linux/mfd/core.h>
 #include <linux/module.h>
 #include <linux/of_device.h>
+#include <linux/of.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
@@ -273,7 +274,7 @@ static int gxp_dbg_probe(struct platform_device *pdev)
 	if (ret < 0)
 		return ret;
 
-	drvdata->postcode_cl = class_create(THIS_MODULE, "chardrv");
+	drvdata->postcode_cl = class_create("chardrv");
 	if (IS_ERR(drvdata->postcode_cl)) {
 		unregister_chrdev_region(drvdata->postcodedev, 1);
 		return PTR_ERR(drvdata->postcode_cl);

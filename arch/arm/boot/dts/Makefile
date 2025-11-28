@@ -15,6 +15,7 @@ subdir-y += cnxt
 subdir-y += gemini
 subdir-y += hisilicon
 subdir-y += hpe
+#dtb-$(CONFIG_ARCH_HPE_GXP) += gxp.dtb
 subdir-y += intel
 subdir-y += marvell
 subdir-y += mediatek

@@ -68,8 +68,8 @@ struct umac_priv {
 static void umac_get_drvinfo(struct net_device *ndev,
 			     struct ethtool_drvinfo *info)
 {
-	strlcpy(info->driver, DRV_MODULE_NAME, sizeof(info->driver));
-	strlcpy(info->version, DRV_MODULE_VERSION, sizeof(info->version));
+	strscpy(info->driver, DRV_MODULE_NAME, sizeof(info->driver));
+	strscpy(info->version, DRV_MODULE_VERSION, sizeof(info->version));
 }
 
 static int umac_get_link_ksettings(struct net_device *ndev,
@@ -631,15 +631,22 @@ static int umac_init_mac_address(struct net_device *ndev)
 	struct umac_priv *umac = netdev_priv(ndev);
 	struct platform_device *pdev = umac->pdev;
 
-	const void *of_mac_addr;
 	char addr[ETH_ALEN];
+	int ret;
 
-	of_mac_addr = of_get_mac_address(pdev->dev.of_node);
-	if (of_mac_addr)
-		memcpy(addr, of_mac_addr, ETH_ALEN);
+	ret = of_get_mac_address(pdev->dev.of_node, addr);
+	if (ret) {
+		netdev_err(ndev,
+			    "Error reading mac address from the DTB\n");
+	}
 
+	// we also have to store a copy of the address in ndev->dev_addr_shadow,
+	// to avoid warn triggered by dev_addr_check. See net/core/dev_addr_lists.c:520
 	if (is_valid_ether_addr(addr)) {
-		ether_addr_copy(ndev->dev_addr, addr);
+		u8 *dst = ndev->dev_addr;
+		u8 *dst_shadow = ndev->dev_addr_shadow;
+		ether_addr_copy(dst, addr);
+		ether_addr_copy(dst_shadow, addr);
 		netdev_info(ndev,
 			    "Read MAC address %pM from DTB\n", ndev->dev_addr);
 	} else {
@@ -648,7 +655,6 @@ static int umac_init_mac_address(struct net_device *ndev)
 			    ndev->dev_addr);
 	}
 
-	memcpy(ndev->dev_addr, &addr, ETH_ALEN);
 	umac_set_mac_address(ndev, addr);
 
 	return 0;
@@ -845,7 +851,7 @@ static int umac_probe(struct platform_device *pdev)
 		}
 	}
 
-	netif_napi_add(ndev, &umac->napi, umac_poll, 64);
+	netif_napi_add(ndev, &umac->napi, umac_poll);
 	ret = register_netdev(ndev);
 	if (ret != 0) {
 		netdev_err(ndev, "failed to register UMAC ret=%d\n", ret);
@@ -857,7 +863,7 @@ static int umac_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int umac_remove(struct platform_device *pdev)
+static void umac_remove(struct platform_device *pdev)
 {
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	struct umac_priv *umac = netdev_priv(ndev);
@@ -865,7 +871,6 @@ static int umac_remove(struct platform_device *pdev)
 	unregister_netdev(ndev);
 	iounmap(umac->base);
 	free_netdev(ndev);
-	return 0;
 }
 
 static const struct of_device_id umac_of_matches[] = {

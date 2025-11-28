@@ -289,8 +289,7 @@ static struct attribute *gxp_psu_attrs[] = {
 
 ATTRIBUTE_GROUPS(gxp_psu);
 
-static int gxp_psu_probe(struct i2c_client *client,
-		const struct i2c_device_id *id)
+static int gxp_psu_probe(struct i2c_client *client)
 {
 	struct gxp_psu_drvdata *drvdata;
 	struct device *hwmon_dev;

@@ -41,7 +41,8 @@ static void __init gxp_dt_init(void)
 	//reset EHCI host controller for clear start
 	__raw_writel(0x00080002,
 		(void __iomem *)(IOP_REGS_VIRT_BASE + IOP_EHCI_USBCMD));
-	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
+	//of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
+	of_platform_default_populate(NULL, NULL, NULL);
 }
 
 static void gxp_restart(enum reboot_mode mode, const char *cmd)

@@ -942,7 +942,6 @@ config CFI
 
 config CFI_CLANG
 	bool
-	transitional
 	help
 	  Transitional config for CFI_CLANG to CFI migration.
 

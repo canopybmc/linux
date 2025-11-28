@@ -149,7 +149,7 @@ static int __init gxp_timer_init(struct device_node *node)
 		goto err_exit;
 	}
 
-	pr_debug("gxp: system timer (irq = %d)\n", irq);
+	pr_info("gxp: system timer (irq = %d)\n", irq);
 	return 0;
 
 err_exit:
@@ -170,30 +170,21 @@ err_free:
 
 static int gxp_timer_probe(struct platform_device *pdev)
 {
-	struct platform_device *gxp_watchdog_device;
-	struct device *dev = &pdev->dev;
-	int ret;
+    struct resource *res;
+    struct device *dev = &pdev->dev;
 
-	if (!gxp_timer) {
-		pr_err("Gxp Timer not initialized, cannot create watchdog");
-		return -ENOMEM;
-	}
+    gxp_timer = devm_kzalloc(dev, sizeof(*gxp_timer), GFP_KERNEL);
+    if (!gxp_timer)
+        return -ENOMEM;
 
-	gxp_watchdog_device = platform_device_alloc("gxp-wdt", -1);
-	if (!gxp_watchdog_device) {
-		pr_err("Timer failed to allocate gxp-wdt");
-		return -ENOMEM;
-	}
+    res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+    gxp_timer->counter = devm_ioremap_resource(dev, res);
+    if (IS_ERR(gxp_timer->counter))
+        return PTR_ERR(gxp_timer->counter);
 
-	/* Pass the base address (counter) as platform data and nothing else */
-	gxp_watchdog_device->dev.platform_data = gxp_timer->counter;
-	gxp_watchdog_device->dev.parent = dev;
+    dev_info(dev, "HPE GXP timer initialized");
 
-	ret = platform_device_add(gxp_watchdog_device);
-	if (ret)
-		platform_device_put(gxp_watchdog_device);
-
-	return ret;
+    return 0;
 }
 
 static const struct of_device_id gxp_timer_of_match[] = {

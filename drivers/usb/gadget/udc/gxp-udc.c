@@ -26,8 +26,6 @@
 #include <linux/regmap.h>
 #include <linux/mfd/syscon.h>
 
-#define VUHCBASE		0x80400000
-
 #define EVGBASE		0x0800
 #define EVGISTAT		0x0000
 #define EVGIEN			0x0004
@@ -727,8 +725,6 @@ static int gxp_udc_start(struct usb_gadget *gadget,
 	drvdata = container_of(gadget, struct gxp_udc_drvdata, gadget);
 	spin_lock(&drvdata->lock);
 
-	pr_info("%s udc%d\n", __func__, drvdata->vdevnum);
-
 	if (drvdata->driver) {
 		dev_err(&drvdata->pdev->dev,
 			"vdev%d start failed driver!=NULL\n", drvdata->vdevnum);
@@ -759,8 +755,6 @@ static int gxp_udc_stop(struct usb_gadget *gadget)
 	drvdata = container_of(gadget, struct gxp_udc_drvdata, gadget);
 	spin_lock(&drvdata->lock);
 
-	pr_info("%s udc%d\n", __func__, drvdata->vdevnum);
-
 	gxp_udc_disconnect(drvdata);
 	drvdata->gadget.speed = USB_SPEED_UNKNOWN;
 	drvdata->driver = NULL;
@@ -778,7 +772,6 @@ static void gxp_udc_out_0byte_status(struct gxp_udc_ep *ep)
 {
 	u32 evdepcc;
 
-	pr_debug("%s\n", __func__);
 	//out
 	evdepcc = readl(ep->base + EVDEPCC);
 	evdepcc &= ~EVDEPCC_CFGINOUT;
@@ -792,7 +785,6 @@ static void gxp_udc_in_0byte_status(struct gxp_udc_ep *ep)
 {
 	u32 evdepcc;
 
-	pr_debug("%s\n", __func__);
 	//in
 	evdepcc = readl(ep->base + EVDEPCC);
 	evdepcc |= EVDEPCC_CFGINOUT;
@@ -1149,6 +1141,9 @@ static int gxp_udc_init(struct gxp_udc_drvdata *drvdata)
 	int i;
 	struct gxp_udc_ep *ep;
 
+	// Disable device interrupt
+	writel(0, drvdata->base + EVDIEN);
+
 	drvdata->gadget.max_speed = USB_SPEED_HIGH;
 	drvdata->gadget.speed = USB_SPEED_UNKNOWN;
 	drvdata->gadget.ops = &gxp_udc_gadget_ops;
@@ -1200,11 +1195,10 @@ static void gxp_udcg_init(struct gxp_udc_drvdata *drvdata)
 	if (!udcg_init_done) {
 		//disable interrupt
 		regmap_write(drvdata->udcg_map, EVGIEN, 0);
-		writel(0, drvdata->base + EVGIEN);
 
 		//disable all flex ep map
 		for (i = 0; i < GXP_UDC_MAX_NUM_FLEX_EP; i += 4)
-			regmap_write(drvdata->udcg_map, EVGIEN + i, 0);
+			regmap_write(drvdata->udcg_map, EVFEMAP + i, 0);
 
 		udcg_init_done = true;
 	}

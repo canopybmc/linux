@@ -1421,6 +1421,13 @@ config GPIO_ELKHARTLAKE
 	  To compile this driver as a module, choose M here: the module will
 	  be called gpio-elkhartlake.
 
+config GPIO_GXP
+	bool "GXP GPIO support"
+	select GPIOLIB_IRQCHIP
+	depends on HPE_GXP_CSM && OF_GPIO
+	help
+	  Say Y here to support GXP GPIO controllers.
+
 config GPIO_JANZ_TTL
 	tristate "Janz VMOD-TTL Digital IO Module"
 	depends on MFD_JANZ_CMODIO

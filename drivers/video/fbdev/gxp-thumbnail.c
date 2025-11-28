@@ -63,6 +63,8 @@ struct gxp_tn_par {
 	void *phys_mem;
 	uint32_t framesize;
 	u32 palette[16];
+	resource_size_t base_fb;
+  resource_size_t size;
 };
 
 /* static int thumbnail_clear(struct gxp_tn_par *info)
@@ -123,7 +125,7 @@ static void gxpfb_enable(struct fb_info *info)
 	writel((gWidth - 1), reg_base + THUMBNAIL_HORIZ_SIZE);
 	writel((gHeight - 1), reg_base + THUMBNAIL_VERT_SIZE);
 
-	writel(gxp_par->phys_mem, reg_base + THUMBNAIL_DEST_BAR);
+	writel((u32)gxp_par->phys_mem, reg_base + THUMBNAIL_DEST_BAR);
 	writel((gWidth * gBpp), reg_base + THUMBNAIL_DEST_PITCH);
 
 	thumbnail_wait_for_axi(gxp_par);
@@ -225,16 +227,18 @@ int gxpfb_probe(struct platform_device *pdev)
 	info->var.red.offset = 0;
 
 	info->fbops = &gxpfb_ops;
-	info->flags = FBINFO_DEFAULT;
+	info->flags = 0;
 
-	info->apertures = alloc_apertures(1);
-	if (!info->apertures) {
-		pr_err("<TN_FB> Cannot allocate memory for apertures\n");
-		err = -ENOMEM;
-		goto out;
-	}
-	info->apertures->ranges[0].base = (resource_size_t) gxp_par->virt_mem;
-	info->apertures->ranges[0].size = gxp_par->framesize;
+	// info->apertures = alloc_apertures(1);
+	// if (!info->apertures) {
+	// 	pr_err("<TN_FB> Cannot allocate memory for apertures\n");
+	// 	err = -ENOMEM;
+	// 	goto out;
+	// }
+	// info->apertures->ranges[0].base = (resource_size_t) gxp_par->virt_mem;
+	// info->apertures->ranges[0].size = gxp_par->framesize;
+	gxp_par->base_fb = (resource_size_t) gxp_par->virt_mem;
+	gxp_par->size = gxp_par->framesize;
 
 	info->pseudo_palette = gxp_par->palette;
 
@@ -272,7 +276,7 @@ out:
 }
 
 
-static int gxpfb_remove(struct platform_device *pdev)
+static void gxpfb_remove(struct platform_device *pdev)
 {
 	struct fb_info *info = platform_get_drvdata(pdev);
 	struct gxp_tn_par *par = info->par;
@@ -292,13 +296,12 @@ static int gxpfb_remove(struct platform_device *pdev)
 	// TODO: Need to free info->aperture ?
 
 	framebuffer_release(info);
-	return 0;
 }
 
 static const struct of_device_id gxp_thumbnail_match[] = {
 	{.compatible = "hpe,gxp-thumbnail"},
 	{ /* null */ },
-}
+};
 MODULE_DEVICE_TABLE(of, gxp_thumbnail_match);
 
 static struct platform_driver gxpfb_driver = {

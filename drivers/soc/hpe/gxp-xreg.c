@@ -9,6 +9,7 @@
 
 #include <linux/device.h>
 #include <linux/gpio.h>
+#include <linux/gpio/driver.h>
 #include <linux/io.h>
 #include <linux/irq.h>
 #include <linux/interrupt.h>
@@ -236,7 +237,7 @@ static int gxp_gpio_xreg_get(struct gpio_chip *chip, unsigned int offset)
 	return ret;
 }
 
-static void gxp_gpio_xreg_set(struct gpio_chip *chip,
+static int gxp_gpio_xreg_set(struct gpio_chip *chip,
 			unsigned int offset, int value)
 {
 	struct gxp_xreg_drvdata *drvdata = dev_get_drvdata(chip->parent);
@@ -274,7 +275,10 @@ static void gxp_gpio_xreg_set(struct gpio_chip *chip,
 		break;
 	default:
 		break;
+		return -1;
 	}
+
+	return 0;
 }
 
 static int gxp_gpio_xreg_get_direction(struct gpio_chip *chip, unsigned int offset)
@@ -396,7 +400,7 @@ static irqreturn_t gxp_xreg_irq_handle(int irq, void *_drvdata)
 	return IRQ_HANDLED;
 }
 
-const static struct gpio_chip xreg_chip = {
+static const struct gpio_chip xreg_chip = {
 	.label			= "gxp-xreg",
 	.owner			= THIS_MODULE,
 	.get			= gxp_gpio_xreg_get,
@@ -427,6 +431,7 @@ static int gxp_xreg_probe(struct platform_device *pdev)
 	int ret;
 	struct gxp_xreg_drvdata *drvdata;
 	struct resource *res;
+	struct gpio_irq_chip *girq;
 
 	drvdata = devm_kzalloc(&pdev->dev,
 				sizeof(struct gxp_xreg_drvdata), GFP_KERNEL);
@@ -434,6 +439,7 @@ static int gxp_xreg_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	platform_set_drvdata(pdev, drvdata);
+
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	drvdata->base = devm_ioremap_resource(&pdev->dev, res);
@@ -450,17 +456,14 @@ static int gxp_xreg_probe(struct platform_device *pdev)
 	drvdata->gpio_chip.ngpio = 100;
 	drvdata->gpio_chip.parent = &pdev->dev;
 
-	ret = devm_gpiochip_add_data(&pdev->dev, &drvdata->gpio_chip, NULL);
-	if (ret < 0)
-		dev_err(&pdev->dev, "Could not register gpiochip for xreg, %d\n", ret);
-
-	ret = gpiochip_irqchip_add(&drvdata->gpio_chip,
-	&gxp_gpio_irqchip, 0, handle_edge_irq, IRQ_TYPE_NONE);
-	if (ret) {
-		dev_info(&pdev->dev, "Could not add irqchip - %d\n", ret);
-		gpiochip_remove(&drvdata->gpio_chip);
-		return ret;
-	}
+	girq = &drvdata->gpio_chip.irq;
+	girq->chip = &gxp_gpio_irqchip;
+	/* This will let us handle the parent IRQ in the driver */
+	girq->parent_handler = NULL;
+	girq->num_parents = 0;
+	girq->parents = NULL;
+	girq->default_type = IRQ_TYPE_NONE;
+	girq->handler = handle_edge_irq;
 
 	// Set up interrupt from XReg
 	// Group5 Mask
@@ -487,6 +490,12 @@ static int gxp_xreg_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	ret = devm_gpiochip_add_data(&pdev->dev, &drvdata->gpio_chip, NULL);
+	if (ret < 0)
+		dev_err(&pdev->dev, "Could not register gpiochip for xreg, %d\n", ret);
+
+	dev_info(&pdev->dev, "HPE GXP XREG driver loaded.\n");
+
 	return 0;
 }
 
@@ -500,4 +509,5 @@ static struct platform_driver gxp_xreg_driver = {
 module_platform_driver(gxp_xreg_driver);
 
 MODULE_AUTHOR("Gilbert Chen <gilbert.chen@hpe.com>");
+MODULE_AUTHOR("Jorge Cisneros <jorge.cisneros@hpe.com>");
 MODULE_DESCRIPTION("HPE GXP Xreg Driver");

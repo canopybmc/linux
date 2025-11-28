@@ -292,15 +292,15 @@ static int gxp_vuart_handle_irq(struct uart_port *port)
 	return 1;
 }
 
-static unsigned int gxp_serial_in(struct uart_port *p, int offset)
+static u32 gxp_serial_in(struct uart_port *p, u32 offset)
 {
 
-	unsigned int value = readb(p->membase + (offset << p->regshift));
+	u32 value = readb(p->membase + (offset << p->regshift));
 	return value;
 }
 
 
-static void gxp_serial_out(struct uart_port *p, int offset, int value)
+static void gxp_serial_out(struct uart_port *p, u32 offset, u32 value)
 {
 	writeb(value, p->membase + (offset << p->regshift));
 
@@ -310,7 +310,7 @@ static void gxp_serial_out(struct uart_port *p, int offset, int value)
 
 static void gxp_8250_set_termios(struct uart_port *port,
 				struct ktermios *termios,
-				struct ktermios *old)
+				const struct ktermios *old)
 {
 	struct uart_8250_port *uart_8250_port = up_to_u8250p(port);
 
@@ -463,7 +463,7 @@ err_sysfs_remove:
 	return rc;
 }
 
-static int gxp_vuart_remove(struct platform_device *pdev)
+static void gxp_vuart_remove(struct platform_device *pdev)
 {
 	struct gxp_vuart *vuart = platform_get_drvdata(pdev);
 
@@ -471,8 +471,6 @@ static int gxp_vuart_remove(struct platform_device *pdev)
 	serial8250_unregister_port(vuart->line);
 	sysfs_remove_group(&vuart->dev->kobj, &gxp_vuart_attr_group);
 	clk_disable_unprepare(vuart->clk);
-
-	return 0;
 }
 
 static const struct of_device_id gxp_vuart_table[] = {

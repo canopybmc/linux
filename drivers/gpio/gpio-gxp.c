@@ -12,6 +12,7 @@
 #include <linux/kthread.h>
 #include <linux/irq.h>
 #include <linux/gpio.h>
+#include <linux/gpio/driver.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
 #include <linux/regmap.h>
@@ -338,13 +339,20 @@ static int gxp_gpio_get(struct gpio_chip *chip, unsigned int offset)
 	return ret;
 }
 
-static void gxp_gpio_set(struct gpio_chip *chip,
+static int gxp_gpio_set(struct gpio_chip *chip,
 			unsigned int offset, int value)
 {
-	if (offset < 200)
+	if (offset < 200) {
 		csm_gpio_set(chip, offset, value);
-	else if (offset >= 250 && offset < 300)
+		return 1;
+	}
+	else if (offset >= 250 && offset < 300) {
 		vuhc_gpio_set(chip, offset - 250, value);
+		return 0;
+	}
+
+	// this is stupid, change later
+	return 0;
 }
 
 static int gxp_gpio_get_direction(struct gpio_chip *chip,
@@ -383,7 +391,7 @@ static int gxp_gpio_direction_output(struct gpio_chip *chip,
 	return ret;
 }
 
-const static struct gpio_chip common_chip = {
+static const struct gpio_chip common_chip = {
 	.label			= "gxp_gpio",
 	.owner			= THIS_MODULE,
 	.get			= gxp_gpio_get,

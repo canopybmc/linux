@@ -1,240 +1,230 @@
-// SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (C) 2022 Hewlett-Packard Enterprise Development Company, L.P. */
+// SPDX-License-Identifier: GPL-2.0
+/* Copyright (C) 2019 Hewlett-Packard Development Company, L.P.
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
 
-#include <linux/bits.h>
-#include <linux/err.h>
-#include <linux/hwmon.h>
 #include <linux/io.h>
 #include <linux/module.h>
-#include <linux/mod_devicetable.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/platform_device.h>
+#include <linux/hwmon.h>
+#include <linux/hwmon-sysfs.h>
+#include <linux/hwmon-vid.h>
+#include <linux/err.h>
+#include <linux/delay.h>
+#include <linux/jiffies.h>
 
-#define OFS_FAN_INST	0 /* Is 0 because plreg base will be set at INST */
-#define OFS_FAN_FAIL	2 /* Is 2 bytes after base */
-#define OFS_SEVSTAT	0 /* Is 0 because fn2 base will be set at SEVSTAT */
-#define POWER_BIT	24
+#include <linux/regmap.h>
+#include <linux/mfd/syscon.h>
+
+#define OFFSET_PWM0DUTY	0x10
+#define OFFSET_PWM1DUTY	0x11
+#define OFFSET_PWM2DUTY	0x12
+#define OFFSET_PWM3DUTY	0x13
+#define OFFSET_PWM4DUTY	0x14
+#define OFFSET_PWM5DUTY	0x15
+#define OFFSET_PWM6DUTY	0x16
+#define OFFSET_PWM7DUTY	0x17
+
 
 struct gxp_fan_ctrl_drvdata {
+	struct device	*dev;
+	struct device	*hwmon_dev;
+	struct regmap	*xreg_map;
+	struct regmap	*fn2_map;
 	void __iomem	*base;
-	void __iomem	*plreg;
-	void __iomem	*fn2;
+	struct mutex update_lock;
 };
 
-static bool fan_installed(struct device *dev, int fan)
+static ssize_t show_fault(struct device *dev, struct device_attribute *attr,
+		char *buf)
 {
+	int nr = (to_sensor_dev_attr(attr))->index;
 	struct gxp_fan_ctrl_drvdata *drvdata = dev_get_drvdata(dev);
-	u8 val;
+	unsigned char val;
+	unsigned int reg;
+	unsigned int mask = 0x1;
 
-	val = readb(drvdata->plreg + OFS_FAN_INST);
+	// Check Fan present.
+	regmap_read(drvdata->xreg_map, 0x28, &reg);
+	reg = reg >> 8;
+	mask = mask << (nr * 2); // Shift 2 bits per Fan
 
-	return !!(val & BIT(fan));
+	val = (reg & mask) ? 1 : 0;
+
+	return sprintf(buf, "%d\n", val);
 }
 
-static long fan_failed(struct device *dev, int fan)
+static ssize_t show_in(struct device *dev, struct device_attribute *attr,
+		char *buf)
 {
+	int nr = (to_sensor_dev_attr(attr))->index;
 	struct gxp_fan_ctrl_drvdata *drvdata = dev_get_drvdata(dev);
-	u8 val;
+	unsigned char val;
+	unsigned int reg;
 
-	val = readb(drvdata->plreg + OFS_FAN_FAIL);
+	// Check Power Status
+	regmap_read(drvdata->fn2_map, 0x70, &reg);
+	if (reg & BIT(24)) {
+		// Check Fan present
+		regmap_read(drvdata->xreg_map, 0x24, &reg);
+		reg = reg >> 24;
 
-	return !!(val & BIT(fan));
-}
-
-static long fan_enabled(struct device *dev, int fan)
-{
-	struct gxp_fan_ctrl_drvdata *drvdata = dev_get_drvdata(dev);
-	u32 val;
-
-	/*
-	 * Check the power status as if the platform is off the value
-	 * reported for the PWM will be incorrect. Report fan as
-	 * disabled.
-	 */
-	val = readl(drvdata->fn2 + OFS_SEVSTAT);
-
-	return !!((val & BIT(POWER_BIT)) && fan_installed(dev, fan));
-}
-
-static int gxp_pwm_write(struct device *dev, u32 attr, int channel, long val)
-{
-	struct gxp_fan_ctrl_drvdata *drvdata = dev_get_drvdata(dev);
-
-	switch (attr) {
-	case hwmon_pwm_input:
-		if (val > 255 || val < 0)
-			return -EINVAL;
-		writeb(val, drvdata->base + channel);
-		return 0;
-	default:
-		return -EOPNOTSUPP;
-	}
-}
-
-static int gxp_fan_ctrl_write(struct device *dev, enum hwmon_sensor_types type,
-			      u32 attr, int channel, long val)
-{
-	switch (type) {
-	case hwmon_pwm:
-		return gxp_pwm_write(dev, attr, channel, val);
-	default:
-		return -EOPNOTSUPP;
-	}
-}
-
-static int gxp_fan_read(struct device *dev, u32 attr, int channel, long *val)
-{
-	switch (attr) {
-	case hwmon_fan_enable:
-		*val = fan_enabled(dev, channel);
-		return 0;
-	case hwmon_fan_fault:
-		*val = fan_failed(dev, channel);
-		return 0;
-	default:
-		return -EOPNOTSUPP;
-	}
-}
-
-static int gxp_pwm_read(struct device *dev, u32 attr, int channel, long *val)
-{
-	struct gxp_fan_ctrl_drvdata *drvdata = dev_get_drvdata(dev);
-	u32 reg;
-
-	/*
-	 * Check the power status of the platform. If the platform is off
-	 * the value reported for the PWM will be incorrect. In this case
-	 * report a PWM of zero.
-	 */
-
-	reg = readl(drvdata->fn2 + OFS_SEVSTAT);
-
-	if (reg & BIT(POWER_BIT))
-		*val = fan_installed(dev, channel) ? readb(drvdata->base + channel) : 0;
-	else
-		*val = 0;
-
-	return 0;
-}
-
-static int gxp_fan_ctrl_read(struct device *dev, enum hwmon_sensor_types type,
-			     u32 attr, int channel, long *val)
-{
-	switch (type) {
-	case hwmon_fan:
-		return gxp_fan_read(dev, attr, channel, val);
-	case hwmon_pwm:
-		return gxp_pwm_read(dev, attr, channel, val);
-	default:
-		return -EOPNOTSUPP;
-	}
-}
-
-static umode_t gxp_fan_ctrl_is_visible(const void *_data,
-				       enum hwmon_sensor_types type,
-				       u32 attr, int channel)
-{
-	umode_t mode = 0;
-
-	switch (type) {
-	case hwmon_fan:
-		switch (attr) {
-		case hwmon_fan_enable:
-		case hwmon_fan_fault:
-			mode = 0444;
-			break;
-		default:
-			break;
-		}
-		break;
-	case hwmon_pwm:
-		switch (attr) {
-		case hwmon_pwm_input:
-			mode = 0644;
-			break;
-		default:
-			break;
-		}
-		break;
-	default:
-		break;
+		// If Fan presents, then read it.
+		val = (reg & BIT(nr)) ? readb(drvdata->base +
+						OFFSET_PWM0DUTY + nr) : 0;
+	} else {
+		// Power Off
+		val = 0;
 	}
 
-	return mode;
+	return sprintf(buf, "%d\n", val);
 }
 
-static const struct hwmon_ops gxp_fan_ctrl_ops = {
-	.is_visible = gxp_fan_ctrl_is_visible,
-	.read = gxp_fan_ctrl_read,
-	.write = gxp_fan_ctrl_write,
+static ssize_t show_pwm(struct device *dev, struct device_attribute *attr,
+			char *buf)
+{
+	int nr = (to_sensor_dev_attr(attr))->index;
+	struct gxp_fan_ctrl_drvdata *drvdata = dev_get_drvdata(dev);
+	unsigned char val;
+
+	val = readb(drvdata->base + OFFSET_PWM0DUTY + nr);
+
+	return sprintf(buf, "%d\n", val);
+}
+
+static ssize_t store_pwm(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	int nr = (to_sensor_dev_attr(attr))->index;
+	struct gxp_fan_ctrl_drvdata *drvdata = dev_get_drvdata(dev);
+	unsigned long val;
+	int err;
+
+	err = kstrtoul(buf, 10, &val);
+	if (err)
+		return err;
+
+	if (val > 255)
+		return -1; // out of range
+
+	mutex_lock(&drvdata->update_lock);
+
+	writeb(val, drvdata->base + OFFSET_PWM0DUTY + nr);
+
+	mutex_unlock(&drvdata->update_lock);
+	return count;
+}
+
+static SENSOR_DEVICE_ATTR(pwm0, 0200 | 0444, show_pwm, store_pwm, 0);
+static SENSOR_DEVICE_ATTR(pwm1, 0200 | 0444, show_pwm, store_pwm, 1);
+static SENSOR_DEVICE_ATTR(pwm2, 0200 | 0444, show_pwm, store_pwm, 2);
+static SENSOR_DEVICE_ATTR(pwm3, 0200 | 0444, show_pwm, store_pwm, 3);
+static SENSOR_DEVICE_ATTR(pwm4, 0200 | 0444, show_pwm, store_pwm, 4);
+static SENSOR_DEVICE_ATTR(pwm5, 0200 | 0444, show_pwm, store_pwm, 5);
+static SENSOR_DEVICE_ATTR(pwm6, 0200 | 0444, show_pwm, store_pwm, 6);
+static SENSOR_DEVICE_ATTR(pwm7, 0200 | 0444, show_pwm, store_pwm, 7);
+
+static struct sensor_device_attribute sda_in_input[] = {
+	SENSOR_ATTR(fan0_input, 0444, show_in, NULL, 0),
+	SENSOR_ATTR(fan1_input, 0444, show_in, NULL, 1),
+	SENSOR_ATTR(fan2_input, 0444, show_in, NULL, 2),
+	SENSOR_ATTR(fan3_input, 0444, show_in, NULL, 3),
+	SENSOR_ATTR(fan4_input, 0444, show_in, NULL, 4),
+	SENSOR_ATTR(fan5_input, 0444, show_in, NULL, 5),
+	SENSOR_ATTR(fan6_input, 0444, show_in, NULL, 6),
+	SENSOR_ATTR(fan7_input, 0444, show_in, NULL, 7),
 };
 
-static const struct hwmon_channel_info * const gxp_fan_ctrl_info[] = {
-	HWMON_CHANNEL_INFO(fan,
-			   HWMON_F_FAULT | HWMON_F_ENABLE,
-			   HWMON_F_FAULT | HWMON_F_ENABLE,
-			   HWMON_F_FAULT | HWMON_F_ENABLE,
-			   HWMON_F_FAULT | HWMON_F_ENABLE,
-			   HWMON_F_FAULT | HWMON_F_ENABLE,
-			   HWMON_F_FAULT | HWMON_F_ENABLE,
-			   HWMON_F_FAULT | HWMON_F_ENABLE,
-			   HWMON_F_FAULT | HWMON_F_ENABLE),
-	HWMON_CHANNEL_INFO(pwm,
-			   HWMON_PWM_INPUT,
-			   HWMON_PWM_INPUT,
-			   HWMON_PWM_INPUT,
-			   HWMON_PWM_INPUT,
-			   HWMON_PWM_INPUT,
-			   HWMON_PWM_INPUT,
-			   HWMON_PWM_INPUT,
-			   HWMON_PWM_INPUT),
-	NULL
+static SENSOR_DEVICE_ATTR(fan0_fault, 0444, show_fault, NULL, 0);
+static SENSOR_DEVICE_ATTR(fan1_fault, 0444, show_fault, NULL, 1);
+static SENSOR_DEVICE_ATTR(fan2_fault, 0444, show_fault, NULL, 2);
+static SENSOR_DEVICE_ATTR(fan3_fault, 0444, show_fault, NULL, 3);
+static SENSOR_DEVICE_ATTR(fan4_fault, 0444, show_fault, NULL, 4);
+static SENSOR_DEVICE_ATTR(fan5_fault, 0444, show_fault, NULL, 5);
+static SENSOR_DEVICE_ATTR(fan6_fault, 0444, show_fault, NULL, 6);
+static SENSOR_DEVICE_ATTR(fan7_fault, 0444, show_fault, NULL, 7);
+
+
+#define IN_UNIT_ATTRS(X) (&sda_in_input[X].dev_attr.attr)
+
+static struct attribute *gxp_fan_ctrl_attrs[] = {
+	&sensor_dev_attr_fan0_fault.dev_attr.attr,
+	&sensor_dev_attr_fan1_fault.dev_attr.attr,
+	&sensor_dev_attr_fan2_fault.dev_attr.attr,
+	&sensor_dev_attr_fan3_fault.dev_attr.attr,
+	&sensor_dev_attr_fan4_fault.dev_attr.attr,
+	&sensor_dev_attr_fan5_fault.dev_attr.attr,
+	&sensor_dev_attr_fan6_fault.dev_attr.attr,
+	&sensor_dev_attr_fan7_fault.dev_attr.attr,
+	IN_UNIT_ATTRS(0),
+	IN_UNIT_ATTRS(1),
+	IN_UNIT_ATTRS(2),
+	IN_UNIT_ATTRS(3),
+	IN_UNIT_ATTRS(4),
+	IN_UNIT_ATTRS(5),
+	IN_UNIT_ATTRS(6),
+	IN_UNIT_ATTRS(7),
+	&sensor_dev_attr_pwm0.dev_attr.attr,
+	&sensor_dev_attr_pwm1.dev_attr.attr,
+	&sensor_dev_attr_pwm2.dev_attr.attr,
+	&sensor_dev_attr_pwm3.dev_attr.attr,
+	&sensor_dev_attr_pwm4.dev_attr.attr,
+	&sensor_dev_attr_pwm5.dev_attr.attr,
+	&sensor_dev_attr_pwm6.dev_attr.attr,
+	&sensor_dev_attr_pwm7.dev_attr.attr,
+	NULL,
 };
 
-static const struct hwmon_chip_info gxp_fan_ctrl_chip_info = {
-	.ops = &gxp_fan_ctrl_ops,
-	.info = gxp_fan_ctrl_info,
-
-};
+ATTRIBUTE_GROUPS(gxp_fan_ctrl);
 
 static int gxp_fan_ctrl_probe(struct platform_device *pdev)
 {
 	struct gxp_fan_ctrl_drvdata *drvdata;
 	struct device *dev = &pdev->dev;
-	struct device *hwmon_dev;
+	struct resource *res;
 
-	drvdata = devm_kzalloc(dev, sizeof(struct gxp_fan_ctrl_drvdata),
-			       GFP_KERNEL);
+	drvdata = devm_kzalloc(&pdev->dev, sizeof(struct gxp_fan_ctrl_drvdata),
+			GFP_KERNEL);
 	if (!drvdata)
 		return -ENOMEM;
 
-	drvdata->base = devm_platform_get_and_ioremap_resource(pdev, 0, NULL);
+	drvdata->dev = &pdev->dev;
+	platform_set_drvdata(pdev, drvdata);
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	drvdata->base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(drvdata->base))
-		return dev_err_probe(dev, PTR_ERR(drvdata->base),
-				     "failed to map base\n");
+		return PTR_ERR(drvdata->base);
 
-	drvdata->plreg = devm_platform_ioremap_resource_byname(pdev,
-							       "pl");
-	if (IS_ERR(drvdata->plreg))
-		return dev_err_probe(dev, PTR_ERR(drvdata->plreg),
-				     "failed to map plreg\n");
+	drvdata->xreg_map = syscon_regmap_lookup_by_phandle(dev->of_node,
+			"xreg_handle");
+	if (IS_ERR(drvdata->xreg_map)) {
+		dev_err(dev, "failed to map xreg_handle\n");
+		return -ENODEV;
+	}
 
-	drvdata->fn2 = devm_platform_ioremap_resource_byname(pdev,
-							     "fn2");
-	if (IS_ERR(drvdata->fn2))
-		return dev_err_probe(dev, PTR_ERR(drvdata->fn2),
-				     "failed to map fn2\n");
+	drvdata->fn2_map = syscon_regmap_lookup_by_phandle(dev->of_node,
+			"fn2_handle");
+	if (IS_ERR(drvdata->fn2_map)) {
+		dev_err(dev, "failed to map fn2_handle\n");
+		return -ENODEV;
+	}
 
-	hwmon_dev = devm_hwmon_device_register_with_info(&pdev->dev,
-							 "hpe_gxp_fan_ctrl",
-							 drvdata,
-							 &gxp_fan_ctrl_chip_info,
-							 NULL);
+	mutex_init(&drvdata->update_lock);
 
-	return PTR_ERR_OR_ZERO(hwmon_dev);
+	drvdata->hwmon_dev = devm_hwmon_device_register_with_groups(&pdev->dev,
+			"fan_ctrl", drvdata, gxp_fan_ctrl_groups);
+	return PTR_ERR_OR_ZERO(drvdata->hwmon_dev);
 }
 
 static const struct of_device_id gxp_fan_ctrl_of_match[] = {
-	{ .compatible = "hpe,gxp-fan-ctrl", },
+	{ .compatible = "hpe,gxp-fan-ctrl" },
 	{},
 };
 MODULE_DEVICE_TABLE(of, gxp_fan_ctrl_of_match);
@@ -242,12 +232,11 @@ MODULE_DEVICE_TABLE(of, gxp_fan_ctrl_of_match);
 static struct platform_driver gxp_fan_ctrl_driver = {
 	.probe		= gxp_fan_ctrl_probe,
 	.driver = {
-		.name	= "gxp-fan-ctrl",
+		.name	= "gxp-fan-crrl",
 		.of_match_table = gxp_fan_ctrl_of_match,
 	},
 };
 module_platform_driver(gxp_fan_ctrl_driver);
 
-MODULE_AUTHOR("Nick Hawkins <nick.hawkins@hpe.com>");
-MODULE_DESCRIPTION("HPE GXP fan controller");
-MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Gilbert Chen <gilbert.chen@hpe.com>");
+MODULE_DESCRIPTION("HPE GXP Fan Ctrl driver");

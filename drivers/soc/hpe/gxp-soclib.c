@@ -15,7 +15,7 @@ struct class *soc_class;
 
 static int __init gxp_soclib_init(void)
 {
-	soc_class = class_create(THIS_MODULE, "soc");
+	soc_class = class_create("soc");
 	if (IS_ERR(soc_class))
 		return PTR_ERR(soc_class);
 	return 0;

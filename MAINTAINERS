@@ -11792,6 +11792,14 @@ S:	Maintained
 F:	Documentation/i2c/busses/i2c-parport.rst
 F:	drivers/i2c/busses/i2c-parport.c
 
+I2C SLAVE MQUEUE DRIVER
+M:	Eduardo Valentin <eduval@amazon.com>
+L:	linux-i2c@vger.kernel.org
+S:	Maintained
+F:	drivers/i2c/i2c-slave-mqueue.c
+F:	Documentation/i2c/slave-mqueue-backend.rst
+F:	Documentation/devicetree/bindings/i2c/i2c-slave-mqueue.txt
+
 I2C SUBSYSTEM
 M:	Wolfram Sang <wsa+renesas@sang-engineering.com>
 L:	linux-i2c@vger.kernel.org

@@ -180,8 +180,6 @@
       reg = <0xd0000000 0x80000>;
       bank-width = <1>;
       erase-size =<1>;
-      #address-cells = <1>;
-      #size-cells = <1>;
       partition@0 {
         label = "host-reserved";
         reg = <0x0 0x10000>;
@@ -430,7 +428,7 @@
       reg = <0xc0004000 0x80>;
       interrupts = <10>;
       interrupt-parent = <&vic0>;
-      local-mac-address = [94 18 82 16 04 d8];
+      mac-address = [94 18 82 16 04 d8];
       phy-handle = <&ext_phy0>;
       int-phy-handle = <&int_phy0>;
     };
@@ -441,7 +439,7 @@
       reg = <0xc0005000 0x80>;
       interrupts = <11>;
       interrupt-parent = <&vic0>;
-      local-mac-address = [5c ed 8c 01 0e a5];
+      mac-address = [94 18 82 16 04 d9];
       phy-handle = <&int_phy1>;
     };
 

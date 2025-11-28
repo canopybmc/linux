@@ -231,7 +231,7 @@ static ssize_t gxp_spi_write(struct spi_nor *nor, loff_t to,
 	value &= ~(1<<24);
 	value |= (cs<<24);	//set chipselect
 	value &= ~(0x07<<16);
-	value |= (nor->addr_width<<16); //set the address size
+	value |= (nor->addr_nbytes<<16); //set the address size
 	value &= ~(0x1f<<19);	//set the dummy_cnt to 0
 	writel(value, reg_base + OFFSET_SPIMCFG);
 
@@ -279,7 +279,7 @@ static int gxp_spi_erase(struct spi_nor *nor, loff_t offs)
 	value &= ~(1<<24);
 	value |= (cs<<24);	//set chipselect
 	value &= ~(0x07<<16);	//set the address size
-	value |= (nor->addr_width<<16);
+	value |= (nor->addr_nbytes<<16);
 	value &= ~(0x1f<<19);	//set the dummy_cnt to 0
 	writel(value, reg_base + OFFSET_SPIMCFG);
 
@@ -412,9 +412,12 @@ static int gxp_spifi_probe(struct platform_device *pdev)
 	return count > 0 ? 0 : -ENODEV;
 }
 
-static int gxp_spifi_remove(struct platform_device *pdev)
+static void gxp_spifi_remove(struct platform_device *pdev)
 {
-	return 0;
+	// dummy func, platfrom_driver.remove expects void type
+	// idk what the logic for this was since it was dummy func before
+	// as well.
+	//return 0;
 }
 
 static const struct of_device_id gxp_spifi_match[] = {

@@ -16,6 +16,7 @@
 #include <linux/errno.h>
 #include <linux/kernel.h>
 #include <linux/of_device.h>
+#include <linux/of.h>
 #include <linux/interrupt.h>
 #include <linux/sched/signal.h>
 #include <linux/io.h>
@@ -777,11 +778,10 @@ unregister_chrdev:
 	unregister_chrdev_region(drvdata->devid, DEVICE_COUNT);
 dma_free:
 	dma_free_coherent(drvdata->dev, SHARED_MEM_SIZE * 2, drvdata->alloc_buf, drvdata->alloc_buf_dma_addr);
-fail:
 	return rc;
 }
 
-static int chif_remove(struct platform_device *pdev)
+static void chif_remove(struct platform_device *pdev)
 {
 	struct chif_drvdata *drvdata;
 
@@ -789,14 +789,13 @@ static int chif_remove(struct platform_device *pdev)
 	cdev_del(&drvdata->chif_cdev);
 	unregister_chrdev_region(drvdata->devid, DEVICE_COUNT);
 	dma_free_coherent(drvdata->dev, SHARED_MEM_SIZE * 2, drvdata->alloc_buf, drvdata->alloc_buf_dma_addr);
-	return 0;
 }
 
 static const struct of_device_id chif_of_match[] = {
 	{ .compatible = "hpe,gxp-chif" },
 	{},
 };
-MODULE_DEVICE_TABLE(of, gxp_xreg_of_match);
+MODULE_DEVICE_TABLE(of, chif_of_match); // check whether xreg was correct here
 
 static struct platform_driver chif_driver = {
 	.probe = chif_probe,

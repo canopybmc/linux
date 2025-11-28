@@ -99,7 +99,7 @@ static const struct of_device_id gxp_coretemp_of_match[] = {
 	{ .compatible = "hpe,gxp-coretemp" },
 	{},
 };
-MODULE_DEVICE_TABLE(of, gxp_fan_ctrl_of_match);
+MODULE_DEVICE_TABLE(of, gxp_coretemp_of_match); // check later for fan_ctrl
 
 static struct platform_driver gxp_coretemp_driver = {
 	.probe		= gxp_coretemp_probe,
