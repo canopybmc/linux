@@ -17,4 +17,16 @@ config ARCH_HPE_GXP
 	help
 	  Support for GXP SoCs
 
+config ARCH_HPE_GXP_GEN10
+	bool "HPE GXP SoC generation 10"
+	depends on ARCH_HPE_GXP
+	help
+	  Support for GXP SoCs of 10th generation
+
+config ARCH_HPE_GXP_GEN11
+	bool "HPE GXP SoC generation 11"
+	depends on ARCH_HPE_GXP
+	help
+	  Support for GXP SoCs of 11th generation
+
 endif
