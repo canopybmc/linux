@@ -244,6 +244,7 @@ static struct irq_chip gxp_gpio_irqchip = {
 	.irq_mask	= gxp_fn2_gpio_irq_mask,
 	.irq_unmask	= gxp_fn2_gpio_irq_unmask,
 	.irq_set_type	= gxp_fn2_gpio_set_type,
+	.flags  = IRQCHIP_IMMUTABLE,
 };
 
 static const struct of_device_id gxp_fn2_of_match[] = {
@@ -290,7 +291,7 @@ static int gxp_fn2_probe(struct platform_device *pdev)
 	drvdata->gpio_chip.parent = &pdev->dev;
 
 	girq = &drvdata->gpio_chip.irq;
-	girq->chip = &gxp_gpio_irqchip;
+	gpio_irq_chip_set_chip(girq, &gxp_gpio_irqchip);
 	/* This will let us handle the parent IRQ in the driver */
 	girq->parent_handler = NULL;
 	girq->num_parents = 0;

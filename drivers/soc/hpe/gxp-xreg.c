@@ -357,6 +357,8 @@ static void gxp_gpio_irq_set_mask(struct irq_data *d, bool set)
 	struct gpio_chip *chip = irq_data_get_irq_chip_data(d);
 	struct gxp_xreg_drvdata *drvdata = dev_get_drvdata(chip->parent);
 
+	chip->irq.chip->flags = IRQCHIP_IMMUTABLE;
+
 	regmap_update_bits(drvdata->xreg_map, XREG_INT_GRP5_BASE,
 			BIT(8)|BIT(10), set == true ? 0:BIT(8)|BIT(10));
 	regmap_update_bits(drvdata->xreg_map, XREG_INT_GRP5_BASE,
@@ -418,6 +420,7 @@ static struct irq_chip gxp_gpio_irqchip = {
 	.irq_mask	= gxp_gpio_irq_mask,
 	.irq_unmask	= gxp_gpio_irq_unmask,
 	.irq_set_type	= gxp_gpio_set_type,
+	.flags  = IRQCHIP_IMMUTABLE,
 };
 
 static const struct of_device_id gxp_xreg_of_match[] = {
@@ -457,7 +460,7 @@ static int gxp_xreg_probe(struct platform_device *pdev)
 	drvdata->gpio_chip.parent = &pdev->dev;
 
 	girq = &drvdata->gpio_chip.irq;
-	girq->chip = &gxp_gpio_irqchip;
+	gpio_irq_chip_set_chip(girq, &gxp_gpio_irqchip);
 	/* This will let us handle the parent IRQ in the driver */
 	girq->parent_handler = NULL;
 	girq->num_parents = 0;
