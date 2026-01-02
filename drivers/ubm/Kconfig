@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# Hardware monitoring chip drivers configuration
+#
+
+menuconfig UBM
+	tristate "Universal Sotrage Backplane Management support"
+	depends on HAS_IOMEM
+	default y
+	help
+		Enable UBM support
+
+config UBM4
+        tristate "UBM 4 driver"
+	default n
+        help
+          If you say yes here you get support for ubm 4 function
+
