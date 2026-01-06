@@ -233,4 +233,5 @@ module_platform_driver(gxp_kcs_bmc_driver);
 
 MODULE_AUTHOR("John Chung <john.chung@hpe.com>");
 MODULE_AUTHOR("Jorge Cisneros <jorge.cisneros@hpe.com>");
+MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("HPE device interface to the KCS BMC device");
