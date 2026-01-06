@@ -38,30 +38,67 @@ struct gxp_psu_drvdata {
 	struct mutex update_lock;
 };
 
-static void find_psu_device(struct device *dev)
+// static void find_psu_device(struct device *dev)
+// {
+// 	struct gxp_power_drvdata *drvdata = dev_get_drvdata(dev);
+// 	// struct gxp_psu_drvdata *psu_data;
+// 	struct device_node *np;
+// 	int i = 0;
+
+// 	drvdata->total_power = 0;
+// 	drvdata->psu_number = 0;
+// 	while (i < PSU_MAX) {
+// 		np = of_parse_phandle(dev->of_node, "psu_phandle", i);
+// 		if (!np)
+// 			break;
+
+// 		drvdata->psu_number++;
+
+// 		drvdata->psu_client[i] = of_find_i2c_device_by_node(np);
+
+// 		dev_info(dev, "Found PSU--addr:%x num:%d\n",
+// 			drvdata->psu_client[i]->addr, drvdata->psu_number);
+// 		of_node_put(np);
+// 		np = NULL;
+// 		i++;
+// 	}
+// }
+//
+static int find_psu_device(struct device *dev)
 {
 	struct gxp_power_drvdata *drvdata = dev_get_drvdata(dev);
-	// struct gxp_psu_drvdata *psu_data;
 	struct device_node *np;
 	int i = 0;
 
+	if (!drvdata)
+		return -EINVAL;
+
 	drvdata->total_power = 0;
 	drvdata->psu_number = 0;
+
 	while (i < PSU_MAX) {
 		np = of_parse_phandle(dev->of_node, "psu_phandle", i);
 		if (!np)
 			break;
 
+		drvdata->psu_client[i] = of_find_i2c_device_by_node(np);
+		of_node_put(np);
+
+		if (!drvdata->psu_client[i]) {
+			dev_info(dev,
+				"PSU %d not ready, defer\n", i);
+			return -EPROBE_DEFER;
+		}
+
 		drvdata->psu_number++;
 
-		drvdata->psu_client[i] = of_find_i2c_device_by_node(np);
-
-		dev_info(dev, "Found PSU--addr:%x num:%d\n",
-			drvdata->psu_client[i]->addr, drvdata->psu_number);
-		of_node_put(np);
-		np = NULL;
+		dev_info(dev, "Found PSU--addr:0x%x num:%d\n",
+			 drvdata->psu_client[i]->addr,
+			 drvdata->psu_number);
 		i++;
 	}
+
+	return 0;
 }
 
 static ssize_t show_power_input(struct device *dev,
@@ -106,8 +143,11 @@ static int gxp_power_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	drvdata->dev = &pdev->dev;
+	dev_info(drvdata->dev, "hmmmmmmmmmmmm\n");
 	platform_set_drvdata(pdev, drvdata);
-	find_psu_device(&pdev->dev);
+	int psu = find_psu_device(&pdev->dev);
+	if (psu)
+		return psu;
 
 	drvdata->hwmon_dev = devm_hwmon_device_register_with_groups(&pdev->dev,
 			"power", drvdata, gxp_power_groups);
@@ -132,3 +172,4 @@ module_platform_driver(gxp_power_driver);
 
 MODULE_AUTHOR("Louis Hsu <kai-hsiang.hsu@hpe.com>");
 MODULE_DESCRIPTION("HPE GXP POWER driver");
+MODULE_LICENSE("GPL");
