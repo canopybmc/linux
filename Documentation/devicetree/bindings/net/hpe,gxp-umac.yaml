@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/net/hpe,gxp-umac.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: HPE GXP UMAC Ethernet Controller
+
+maintainers:
+  - Marcello Sylvester Bauer <marcello.bauer@9elements.com>
+
+description:
+  The HPE GXP SoC includes two UMAC ethernet controllers for BMC
+  network connectivity. One is typically connected to an external
+  Marvell PHY for dedicated management and the other uses NCSI
+  for sideband communication with the host NIC.
+
+allOf:
+  - $ref: ethernet-controller.yaml#
+
+properties:
+  compatible:
+    const: hpe,gxp-umac
+
+  reg:
+    maxItems: 1
+
+  interrupts:
+    maxItems: 1
+
+  phy-handle:
+    description: Reference to the external PHY
+
+  int-phy-handle:
+    $ref: /schemas/types.yaml#/definitions/phandle
+    description: Reference to the internal PHY for SGMII/GMII bridging
+
+  mac-address: true
+
+  use-ncsi:
+    type: boolean
+    description: Use NCSI instead of standard PHY
+
+required:
+  - compatible
+  - reg
+  - interrupts
+
+unevaluatedProperties: false
+
+examples:
+  - |
+    ethernet@c0004000 {
+        compatible = "hpe,gxp-umac";
+        reg = <0xc0004000 0x80>;
+        interrupts = <10>;
+        phy-handle = <&ext_phy0>;
+        int-phy-handle = <&int_phy0>;
+        mac-address = [00 11 22 33 44 55];
+    };
