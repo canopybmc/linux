@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# HPE network device configuration
+#
+
+config NET_VENDOR_HPE
+	bool "Hewlett Packard Enterprise devices"
+	default y
+	depends on ARCH_HPE
+	help
+	  If you have a network (Ethernet) card belonging to this class, say Y.
+
+	  Note that the answer to this question doesn't directly affect the
+	  kernel: saying N will just cause the configurator to skip all
+	  the questions about HPE devices. If you say Y, you will be asked
+	  for your specific card in the following questions.
+
+if NET_VENDOR_HPE
+
+config GXP_UMAC
+	tristate "HPE GXP UMAC support"
+	depends on ARCH_HPE
+	select CRC32
+	select MII
+	select PHYLIB
+	select GXP_UMAC_MDIO
+	help
+	  This driver supports the UMAC ethernet controller found on
+	  HPE GXP BMC SoCs. The GXP is used in HPE ProLiant Gen10/Gen11
+	  servers. Say Y here if you want to use the ethernet interface
+	  on these systems.
+
+	  To compile this driver as a module, choose M here. The module
+	  will be called gxp-umac.
+
+config GXP_UMAC_MDIO
+	tristate "HPE GXP UMAC MDIO bus support"
+	depends on ARCH_HPE
+	help
+	  This driver supports the MDIO bus controller integrated into
+	  the HPE GXP UMAC ethernet MAC. It is needed for PHY management.
+
+	  This is typically selected automatically when GXP_UMAC is enabled.
+
+endif # NET_VENDOR_HPE
