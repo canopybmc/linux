@@ -84,6 +84,17 @@ config NVMEM_BRCM_NVRAM
 	  This driver provides support for Broadcom's NVRAM that can be accessed
 	  using I/O mapping.
 
+config NVMEM_HPE_GXP
+	tristate "HPE GXP Virtual EEPROM support"
+	depends on ARCH_HPE_GXP || COMPILE_TEST
+	help
+	  This driver provides read-only access to the virtual EEPROM on
+	  HPE GXP BMC SoCs. The EEPROM contains board identification data
+	  including serial number, part number, and MAC addresses.
+
+	  This driver can also be built as a module. If so, the module will
+	  be called gxp-nvmem.
+
 config NVMEM_IMX_IIM
 	tristate "i.MX IC Identification Module support"
 	depends on ARCH_MXC || COMPILE_TEST
