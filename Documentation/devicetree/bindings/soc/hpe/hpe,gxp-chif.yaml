@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/soc/hpe/hpe,gxp-chif.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: HPE GXP CHIF (Channel Interface)
+
+maintainers:
+  - Marcello Sylvester Bauer <marcello.bauer@9elements.com>
+
+description: |
+  The HPE GXP SoC includes a Channel Interface (CHIF) block that provides
+  bidirectional communication between the BMC and host CPU. The driver
+  exposes a character device (/dev/chif24) for userspace applications to
+  exchange packets with the host.
+
+  Features:
+  - 1MB DMA-coherent shared memory with 32-channel CCB table
+  - Doorbell interrupt handling for packet notifications
+  - Read/write interface for packet exchange
+  - Sysfs interface for protocol header inspection
+
+  This node must be a child of the FN2 syscon node.
+
+properties:
+  compatible:
+    const: hpe,gxp-chif
+
+  interrupts:
+    maxItems: 1
+    description: Doorbell interrupt from host
+
+required:
+  - compatible
+  - interrupts
+
+additionalProperties: false
+
+examples:
+  - |
+    fn2: fn2@80200000 {
+        compatible = "hpe,gxp-fn2", "simple-mfd", "syscon";
+        reg = <0x80200000 0x100000>;
+        #address-cells = <1>;
+        #size-cells = <1>;
+
+        chif {
+            compatible = "hpe,gxp-chif";
+            interrupts = <12>;
+        };
+    };

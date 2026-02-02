@@ -44,6 +44,10 @@ properties:
     minItems: 1
     maxItems: 50
 
+  chif:
+    type: object
+    $ref: hpe,gxp-chif.yaml#
+
 required:
   - compatible
   - reg
