@@ -43,6 +43,7 @@ struct gxp_spi {
 	void __iomem *reg_base;
 	void __iomem *dat_base;
 	void __iomem *dir_base;
+	resource_size_t dir_size;
 	struct device *dev;
 	struct gxp_spi_chip chips[GXP_SPI0_MAX_CHIPSELECT];
 };
@@ -146,6 +147,9 @@ static ssize_t gxp_spi_read(struct gxp_spi_chip *chip, const struct spi_mem_op *
 
 	if (chip->cs == 0)
 		offset += 0x4000000;
+
+	if (offset + op->data.nbytes > spifi->dir_size)
+		return gxp_spi_read_reg(chip, op);
 
 	memcpy_fromio(op->data.buf.in, spifi->dir_base + offset, op->data.nbytes);
 
@@ -252,6 +256,7 @@ static int gxp_spifi_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	const struct gxp_spi_data *data;
 	struct spi_controller *ctlr;
+	struct resource *res;
 	struct gxp_spi *spifi;
 	int ret;
 
@@ -275,9 +280,10 @@ static int gxp_spifi_probe(struct platform_device *pdev)
 	if (IS_ERR(spifi->dat_base))
 		return PTR_ERR(spifi->dat_base);
 
-	spifi->dir_base = devm_platform_ioremap_resource(pdev, 2);
+	spifi->dir_base = devm_platform_get_and_ioremap_resource(pdev, 2, &res);
 	if (IS_ERR(spifi->dir_base))
 		return PTR_ERR(spifi->dir_base);
+	spifi->dir_size = resource_size(res);
 
 	ctlr->mode_bits = data->mode_bits;
 	ctlr->bus_num = pdev->id;
