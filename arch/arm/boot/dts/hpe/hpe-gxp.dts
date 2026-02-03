@@ -197,6 +197,12 @@
 				"post-complete",
 				/* 4: Button state (input) */
 				"btn-state";
+
+			chif: chif {
+				compatible = "hpe,gxp-chif";
+				interrupts = <12>;
+				interrupt-parent = <&vic0>;
+			};
 		};
 
 		espi: espi@80fe0000 {
