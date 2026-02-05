@@ -8,7 +8,7 @@
 / {
 	#address-cells = <1>;
 	#size-cells = <1>;
-	compatible = "hpe,gxp-dl360gen10", "hpe,gxp";
+	compatible = "hpe,gxp";
 	model = "Hewlett Packard Enterprise ProLiant dl360 Gen10";
 
 	aliases {

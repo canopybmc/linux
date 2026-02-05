@@ -12,12 +12,7 @@ maintainers:
 
 properties:
   compatible:
-    oneOf:
-      - description: GXP Based Boards
-        items:
-          - enum:
-              - hpe,gxp-dl360gen10
-          - const: hpe,gxp
+    const: hpe,gxp
 
 required:
   - compatible
