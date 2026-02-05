@@ -241,6 +241,42 @@
 			#size-cells = <0>;
 		};
 
+		veeprom: nvmem@a0017f00 {
+			compatible = "hpe,gxp-nvmem";
+			reg = <0xa0017f00 0x100>;
+			read-only;
+
+			nvmem-layout {
+				compatible = "fixed-layout";
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				board_sn: serial-number@1 {
+					reg = <0x01 0x10>;
+				};
+
+				board_pn: part-number@6d {
+					reg = <0x6d 0x10>;
+				};
+
+				mac0: mac-address-0@84 {
+					reg = <0x84 0x06>;
+				};
+
+				mac1: mac-address-1@8a {
+					reg = <0x8a 0x06>;
+				};
+
+				pca_sn: pca-serial-number@90 {
+					reg = <0x90 0x10>;
+				};
+
+				pca_pn: pca-part-number@a0 {
+					reg = <0xa0 0x10>;
+				};
+			};
+		};
+
 		fanctrl: fan-controller@c1000c00 {
 			compatible = "hpe,gxp-fan-ctrl";
 			reg = <0xc1000c00 0x200>,
