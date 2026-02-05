@@ -14,6 +14,8 @@
 		serial0 = &uarta;
 		serial1 = &uartb;
 		serial2 = &uartc;
+		ethernet0 = &umac0;
+		ethernet1 = &umac1;
 	};
 
 	chosen {
@@ -275,6 +277,60 @@
 					reg = <0xa0 0x10>;
 				};
 			};
+		};
+
+		mdio0: mdio@c0004080 {
+			compatible = "hpe,gxp-umac-mdio";
+			reg = <0xc0004080 0x10>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			ext_phy0: ethernet-phy@0 {
+				compatible = "ethernet-phy-ieee802.3-c22";
+				phy-mode = "sgmii";
+				reg = <0>;
+			};
+		};
+
+		mdio1: mdio@c0005080 {
+			compatible = "hpe,gxp-umac-mdio";
+			reg = <0xc0005080 0x10>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			int_phy0: ethernet-phy@0 {
+				compatible = "ethernet-phy-ieee802.3-c22";
+				phy-mode = "gmii";
+				reg = <0>;
+			};
+
+			int_phy1: ethernet-phy@1 {
+				compatible = "ethernet-phy-ieee802.3-c22";
+				phy-mode = "gmii";
+				reg = <1>;
+			};
+		};
+
+		umac0: ethernet@c0004000 {
+			compatible = "hpe,gxp-umac";
+			reg = <0xc0004000 0x80>;
+			interrupts = <10>;
+			interrupt-parent = <&vic0>;
+			phy-handle = <&ext_phy0>;
+			int-phy-handle = <&int_phy0>;
+			nvmem-cells = <&mac0>;
+			nvmem-cell-names = "mac-address";
+		};
+
+		umac1: ethernet@c0005000 {
+			compatible = "hpe,gxp-umac";
+			reg = <0xc0005000 0x80>;
+			interrupts = <11>;
+			interrupt-parent = <&vic0>;
+			phy-handle = <&int_phy1>;
+			use-ncsi;
+			nvmem-cells = <&mac1>;
+			nvmem-cell-names = "mac-address";
 		};
 
 		fanctrl: fan-controller@c1000c00 {
