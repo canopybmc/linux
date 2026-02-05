@@ -1,0 +1,58 @@
+// SPDX-License-Identifier: GPL-2.0
+
+partitions {
+	compatible = "fixed-partitions";
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	bmc@0 {
+		reg = <0x0 0x1fc0000>;
+		label = "bmc";
+	};
+
+	u-boot@0 {
+		reg = <0x0 0x60000>;
+		label = "u-boot";
+	};
+
+	u-boot-env@70000 {
+		reg = <0x70000 0x20000>;
+		label = "u-boot-env";
+	};
+
+	kernel@80000 {
+		reg = <0x80000 0x4c0000>;
+		label = "kernel";
+	};
+
+	rofs@540000 {
+		reg = <0x540000 0x1a00000>;
+		label = "rofs";
+	};
+
+	rwfs@1f40000 {
+		reg = <0x1f40000 0x30000>;
+		label = "rwfs";
+	};
+
+	uboot-sig@1f70000 {
+		reg = <0x1f70000 0x10000>;
+		label = "uboot-sig";
+	};
+
+	gxp@1f80000 {
+		reg = <0x1f80000 0x80000>;
+		label = "gxp";
+	};
+
+	gxp-bootblock@1f80000 {
+		reg = <0x1f80000 0x40000>;
+		label = "gxp-bootblock";
+	};
+
+	gxp-ckb@1fc0000 {
+		reg = <0x1fc0000 0x40000>;
+		label = "gxp-ckb";
+		read-only;
+	};
+};
