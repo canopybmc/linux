@@ -370,6 +370,16 @@ config GPIO_GRGPIO
 	  Select this to support Aeroflex Gaisler GRGPIO cores from the GRLIB
 	  VHDL IP core library.
 
+config GPIO_GXP
+	tristate "HPE GXP GPIO support"
+	depends on ARCH_HPE_GXP || COMPILE_TEST
+	select MFD_SYSCON
+	help
+	  Select this to enable GPIO support for the HPE GXP BMC SoC.
+	  The driver provides 300 GPIO lines through the CSM (Slave
+	  Instrumentation and System Support) and VUHC (Virtual USB
+	  Host Controller) register blocks.
+
 config GPIO_HISI
 	tristate "HiSilicon GPIO controller driver"
 	depends on ARM64 || COMPILE_TEST
