@@ -1,0 +1,94 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/soc/hpe/hpe,gxp-power-ctrl.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: HPE GXP Host Power Controller
+
+maintainers:
+  - Marcello Sylvester Bauer <marcello.bauer@9elements.com>
+
+description: |
+  The HPE GXP host power controller manages the CPLD-mediated boot
+  sequence for HPE ProLiant Gen11 servers. It acts as a GPIO controller
+  that wraps the FN2 virtual power button and power good signals,
+  injecting the required CPLD register configuration when the host
+  transitions between power states.
+
+  Exposed GPIO lines:
+  - Line 0 (power-ctrl-out): Output, wraps FN2 VPBTN with pre-power-on
+    CPLD configuration (flash select, SoC release, boot control)
+  - Line 1 (power-ctrl-good): Input, wraps FN2 PGOOD with shutdown
+    acknowledgment (boot control hold on PGOOD falling edge)
+  - Line 2 (reset-out): Output, warm reset control. Assert holds the
+    boot gate and cycles SoC release; deassert runs the full
+    prepare-boot sequence to release the host.
+
+  This driver is designed for integration with x86-power-control,
+  which manages the power button pulse timing and state machine.
+
+properties:
+  compatible:
+    const: hpe,gxp-power-ctrl
+
+  hpe,xreg:
+    $ref: /schemas/types.yaml#/definitions/phandle
+    description: Phandle to the XREG syscon node for CPLD registers
+
+  hpe,csm:
+    $ref: /schemas/types.yaml#/definitions/phandle
+    description: Phandle to the CSM syscon node for shutdown reason register
+
+  hpe,espi:
+    $ref: /schemas/types.yaml#/definitions/phandle
+    description:
+      Phandle to the eSPI syscon node. Required on Intel and AMD based
+      ProLiant Gen11 servers to reset the eSPI Out-of-Band controller
+      before host power-on. Ampere-based servers do not use eSPI and
+      this property should be omitted for those platforms.
+
+  vpbtn-gpios:
+    maxItems: 1
+    description: GPIO for virtual power button (output, forwarded to FN2)
+
+  pgood-gpios:
+    maxItems: 1
+    description: GPIO for host power good signal (input, monitored for state changes)
+
+  gpio-controller: true
+
+  "#gpio-cells":
+    const: 2
+
+  gpio-line-names:
+    items:
+      - const: power-ctrl-out
+      - const: power-ctrl-good
+      - const: reset-out
+
+required:
+  - compatible
+  - hpe,xreg
+  - vpbtn-gpios
+  - pgood-gpios
+  - gpio-controller
+  - "#gpio-cells"
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/gpio/gpio.h>
+
+    power-ctrl {
+        compatible = "hpe,gxp-power-ctrl";
+        hpe,xreg = <&xreg>;
+        hpe,csm = <&csm>;
+        hpe,espi = <&espi>;
+        vpbtn-gpios = <&fn2 0 GPIO_ACTIVE_HIGH>;
+        pgood-gpios = <&fn2 1 GPIO_ACTIVE_HIGH>;
+        gpio-controller;
+        #gpio-cells = <2>;
+        gpio-line-names = "power-ctrl-out", "power-ctrl-good", "reset-out";
+    };
