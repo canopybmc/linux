@@ -15,6 +15,7 @@ obj-y				+= fsl/
 obj-y				+= fujitsu/
 obj-$(CONFIG_ARCH_GEMINI)	+= gemini/
 obj-y				+= hisilicon/
+obj-$(CONFIG_SOC_HPE)		+= hpe/
 obj-y				+= imx/
 obj-y				+= ixp4xx/
 obj-$(CONFIG_SOC_XWAY)		+= lantiq/

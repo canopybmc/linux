@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# HPE SoC drivers
+#
+
+config SOC_HPE
+	bool "HPE SoC drivers"
+	depends on ARCH_HPE || COMPILE_TEST
+	help
+	  Say Y here to enable support for HPE GXP SoC drivers.
+	  The GXP is a BMC SoC used in HPE ProLiant servers. This
+	  option enables the SoC infrastructure drivers for CSM,
+	  XREG, and FN2 register blocks.
+
+if SOC_HPE
+
+config SOC_HPE_GXP
+	bool
+	default n
+
+config SOC_HPE_GXP_CSM
+	tristate "HPE GXP CSM support"
+	depends on ARCH_HPE_GXP || COMPILE_TEST
+	select SOC_HPE_GXP
+	select MFD_SYSCON
+	select REGMAP_MMIO
+	help
+	  Say Y here to add support for the HPE GXP CSM (Slave
+	  Instrumentation and System Support) block. This provides
+	  sysfs interfaces for controlling virtual EHCI enable and
+	  software shutdown.
+
+config SOC_HPE_GXP_XREG
+	tristate "HPE GXP XREG support"
+	depends on ARCH_HPE_GXP || COMPILE_TEST
+	depends on GPIOLIB
+	select SOC_HPE_GXP
+	select MFD_SYSCON
+	select REGMAP_MMIO
+	select GPIOLIB_IRQCHIP
+	help
+	  Say Y here to add support for the HPE GXP XREG (Extended
+	  Register Block). This provides 150 GPIO lines for LEDs,
+	  fan status, PSU presence, and buttons with interrupt
+	  support for power button and PSU events.
+
+config SOC_HPE_GXP_FN2
+	tristate "HPE GXP FN2 support"
+	depends on ARCH_HPE_GXP || COMPILE_TEST
+	depends on GPIOLIB
+	select SOC_HPE_GXP
+	select MFD_SYSCON
+	select REGMAP_MMIO
+	select GPIOLIB_IRQCHIP
+	help
+	  Say Y here to add support for the HPE GXP FN2 (Embedded
+	  Management Processor Support and Configuration). This
+	  provides GPIO lines for power state control (VPBTN,
+	  PGOOD, PERST) and interrupt handling.
+
+endif # SOC_HPE
