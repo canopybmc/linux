@@ -58,4 +58,20 @@ config SOC_HPE_GXP_FN2
 	  provides GPIO lines for power state control (VPBTN,
 	  PGOOD, PERST) and interrupt handling.
 
+config SOC_HPE_GXP_POWER_CTRL
+	tristate "HPE GXP host power controller"
+	depends on ARCH_HPE_GXP || COMPILE_TEST
+	depends on GPIOLIB
+	depends on SOC_HPE_GXP_FN2
+	depends on SOC_HPE_GXP_XREG
+	select MFD_SYSCON
+	select REGMAP_MMIO
+	help
+	  Say Y here to add support for the HPE GXP host power
+	  controller. This wraps the FN2 virtual power button and
+	  power good GPIO lines, injecting CPLD register
+	  configuration during host power state transitions.
+	  It exposes two GPIO lines (power-button and power-good)
+	  for integration with x86-power-control.
+
 endif # SOC_HPE
