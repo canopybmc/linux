@@ -14,6 +14,7 @@
 		serial0 = &uarta;
 		serial1 = &uartb;
 		serial2 = &uartc;
+		serial3 = &vuart;
 		ethernet0 = &umac0;
 		ethernet1 = &umac1;
 	};
@@ -271,6 +272,23 @@
 			interrupt-parent = <&vic0>;
 			clock-frequency = <1846153>;
 			reg-shift = <0>;
+		};
+
+		vuart_cfg: syscon@80fc0230 {
+			compatible = "hpe,gxp-vuart-cfg", "syscon";
+			reg = <0x80fc0230 0x100>;
+			reg-io-width = <1>;
+		};
+
+		vuart: serial@80fd0200 {
+			compatible = "hpe,gxp-vuart";
+			reg = <0x80fd0200 0x100>;
+			interrupts = <2>;
+			interrupt-parent = <&vic1>;
+			clock-frequency = <1846153>;
+			reg-shift = <0>;
+			serial-line = <3>;
+			vuart-cfg = <&vuart_cfg>;
 		};
 
 		st: timer@c0000080 {
