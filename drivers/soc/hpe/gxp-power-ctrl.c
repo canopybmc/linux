@@ -29,7 +29,12 @@
  * On probe (BMC boot):
  *   1. Set PSU enable to 0xFF
  *   2. Set power state to 0x08 (exit S5)
- *   3. Set boot_control to 0x24 (release)
+ *   3. Run prepare-boot sequence
+ *     - flash select
+ *     - SoC release
+ *     - eSPI reset
+ *     - boot control release
+ *     - shutdown reason clear
  *
  * Register sources:
  *   flash_select:    XREG offset 0x119 (direct readb/writeb)
@@ -149,8 +154,8 @@ static void gxp_power_ctrl_shutdown_ack(struct gxp_power_ctrl *pctrl)
  * Initial platform configuration on BMC boot.
  * Only runs if the host is not already powered on.
  *
- * This replicates HPE's host-boot-enable script:
- *   PSU enable = 0xFF, exit S5 = 0x08, boot_control = 0x24
+ * Enables PSUs and exits S5 power state, then runs the full
+ * prepare-boot sequence.
  */
 static void gxp_power_ctrl_init_platform(struct gxp_power_ctrl *pctrl)
 {
@@ -169,13 +174,8 @@ static void gxp_power_ctrl_init_platform(struct gxp_power_ctrl *pctrl)
 	/* Exit S5 power state */
 	writeb(0x08, pctrl->xreg_base + XREG_POWER_STATE);
 
-	/* Release host boot gate */
-	writeb(XREG_BOOT_CONTROL_RELEASE,
-	       pctrl->xreg_base + XREG_BOOT_CONTROL);
-
-	/* Clear shutdown reason so fresh boot starts clean */
-	if (pctrl->shutdown_reason_reg)
-		writeb(0x00, pctrl->shutdown_reason_reg);
+	/* Prepare CPLD for host boot */
+	gxp_power_ctrl_prepare_boot(pctrl);
 }
 
 /*
