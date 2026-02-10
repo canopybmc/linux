@@ -1,0 +1,72 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/serial/hpe,gxp-vuart.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: HPE GXP Virtual UART
+
+maintainers:
+  - Marcello Sylvester Bauer <marcello.bauer@9elements.com>
+
+description:
+  The HPE GXP BMC SoC provides a Virtual UART (VUART) that connects the
+  BMC to the host CPU over an internal LPC bus path. The VUART appears as
+  a 16550A-compatible device with additional GXP-specific control and
+  status registers for FIFO management and host-side interrupt routing.
+
+properties:
+  compatible:
+    const: hpe,gxp-vuart
+
+  reg:
+    maxItems: 1
+
+  interrupts:
+    maxItems: 1
+
+  clock-frequency:
+    description:
+      UART input clock frequency in Hz.
+
+  reg-shift:
+    description:
+      Quantity to shift the register offsets by.
+
+  serial-line:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description:
+      Force a specific ttyS line number for this UART.
+
+  vuart-cfg:
+    $ref: /schemas/types.yaml#/definitions/phandle
+    description:
+      Phandle to a syscon node providing the VUART host-side configuration
+      registers (LPC address and SIRQ routing).
+
+required:
+  - compatible
+  - reg
+  - interrupts
+  - clock-frequency
+  - vuart-cfg
+
+additionalProperties: false
+
+examples:
+  - |
+    vuart_cfg: syscon@80fc0230 {
+        compatible = "hpe,gxp-vuart-cfg", "syscon";
+        reg = <0x80fc0230 0x100>;
+        reg-io-width = <1>;
+    };
+
+    serial@80fd0200 {
+        compatible = "hpe,gxp-vuart";
+        reg = <0x80fd0200 0x100>;
+        interrupts = <2>;
+        clock-frequency = <1846153>;
+        reg-shift = <0>;
+        serial-line = <3>;
+        vuart-cfg = <&vuart_cfg>;
+    };
