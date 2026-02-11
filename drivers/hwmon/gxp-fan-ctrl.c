@@ -12,6 +12,8 @@
 #include <linux/regmap.h>
 #include <linux/soc/hpe/gxp-regs.h>
 
+#define GXP_FAN_PWM_BASE	0x10
+
 struct gxp_fan_ctrl_drvdata {
 	void __iomem	*base;
 	struct regmap	*xreg_map;
@@ -35,7 +37,7 @@ static long fan_failed(struct device *dev, int fan)
 
 	regmap_read(drvdata->xreg_map, XREG_FAN_FAIL_ID, &val);
 
-	return !!(val & BIT(fan));
+	return !!(val & GENMASK(fan * 2 + 1, fan * 2));
 }
 
 static long fan_enabled(struct device *dev, int fan)
@@ -61,7 +63,7 @@ static int gxp_pwm_write(struct device *dev, u32 attr, int channel, long val)
 	case hwmon_pwm_input:
 		if (val > 255 || val < 0)
 			return -EINVAL;
-		writeb(val, drvdata->base + channel);
+		writeb(val, drvdata->base + GXP_FAN_PWM_BASE + channel);
 		return 0;
 	default:
 		return -EOPNOTSUPP;
@@ -107,7 +109,8 @@ static int gxp_pwm_read(struct device *dev, u32 attr, int channel, long *val)
 	regmap_read(drvdata->fn2_map, FN2_SEVSTAT, &reg);
 
 	if (reg & FN2_SEVSTAT_PGOOD_STATE)
-		*val = fan_installed(dev, channel) ? readb(drvdata->base + channel) : 0;
+		*val = fan_installed(dev, channel) ?
+			readb(drvdata->base + GXP_FAN_PWM_BASE + channel) : 0;
 	else
 		*val = 0;
 
