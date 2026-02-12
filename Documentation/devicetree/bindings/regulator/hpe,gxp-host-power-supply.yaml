@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/regulator/hpe,gxp-host-power-supply.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: HPE GXP CPLD Host Power Supply
+
+maintainers:
+  - Marcello Sylvester Bauer <marcello.bauer@9elements.com>
+
+description: |
+  The HPE GXP SoC uses a CPLD that controls the host power rail.
+  This regulator exposes the CPLD power-good state to consumer
+  devices (fans, sensors) through the regulator framework. The
+  enable state is read from the FN2 system event status register.
+
+  This node must be a child of the FN2 syscon node.
+
+allOf:
+  - $ref: regulator.yaml#
+
+properties:
+  compatible:
+    const: hpe,gxp-host-power-supply
+
+  regulator-name: true
+
+required:
+  - compatible
+
+unevaluatedProperties: false
+
+examples:
+  - |
+    syscon@80200000 {
+      compatible = "hpe,gxp-fn2", "simple-mfd", "syscon";
+      reg = <0x80200000 0x100000>;
+
+      regulator-host-power {
+        compatible = "hpe,gxp-host-power-supply";
+        regulator-name = "host-power";
+      };
+    };
