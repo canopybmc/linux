@@ -525,6 +525,11 @@
 			nvmem-cell-names = "mac-address";
 		};
 
+		coretemp: coretemp@c0000130 {
+			compatible = "hpe,gxp-coretemp";
+			reg = <0xc0000130 0x8>;
+		};
+
 		fan-keys {
 		compatible = "gpio-keys-polled";
 		poll-interval = <1000>;
