@@ -450,6 +450,17 @@ config REGULATOR_GPIO
 	  and the platform has to provide a mapping of GPIO-states
 	  to target volts/amps.
 
+config REGULATOR_GXP_CPLD
+	tristate "HPE GXP CPLD host power supply"
+	depends on (ARCH_HPE_GXP && MFD_SYSCON) || COMPILE_TEST
+	help
+	  This driver exposes the CPLD-controlled host power state on
+	  HPE GXP BMC SoCs as a regulator. The enable state is read
+	  from the FN2 system event status register (power-good bit).
+
+	  This driver can also be built as a module. If so, the module
+	  will be called gxp-cpld-regulator.
+
 config REGULATOR_HI6421
 	tristate "HiSilicon Hi6421 PMIC voltage regulator support"
 	depends on MFD_HI6421_PMIC && OF
