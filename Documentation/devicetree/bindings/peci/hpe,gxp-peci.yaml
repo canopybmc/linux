@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/peci/hpe,gxp-peci.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: HPE GXP PECI Bus
+
+maintainers:
+  - Marcello Sylvester Bauer <marcello.bauer@9elements.com>
+
+allOf:
+  - $ref: peci-controller.yaml#
+
+properties:
+  compatible:
+    const: hpe,gxp-peci
+
+  reg:
+    maxItems: 1
+
+  interrupts:
+    maxItems: 1
+
+  peci-supply:
+    description: Host power supply regulator for PECI bus power gating
+
+required:
+  - compatible
+  - reg
+  - interrupts
+
+additionalProperties: false
+
+examples:
+  - |
+    peci-controller@80000400 {
+      compatible = "hpe,gxp-peci";
+      reg = <0x80000400 0x200>;
+      interrupts = <22>;
+      interrupt-parent = <&vic1>;
+      peci-supply = <&host_power>;
+    };
