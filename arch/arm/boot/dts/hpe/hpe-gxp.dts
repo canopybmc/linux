@@ -529,6 +529,14 @@
 			nvmem-cell-names = "mac-address";
 		};
 
+		peci: peci-controller@80000400 {
+			compatible = "hpe,gxp-peci";
+			reg = <0x80000400 0x200>;
+			interrupts = <22>;
+			interrupt-parent = <&vic1>;
+			peci-supply = <&host_power>;
+		};
+
 		coretemp: coretemp@c0000130 {
 			compatible = "hpe,gxp-coretemp";
 			reg = <0xc0000130 0x8>;
