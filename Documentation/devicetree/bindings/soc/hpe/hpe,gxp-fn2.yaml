@@ -48,6 +48,11 @@ properties:
     type: object
     $ref: hpe,gxp-chif.yaml#
 
+patternProperties:
+  "^regulator-":
+    type: object
+    $ref: /schemas/regulator/hpe,gxp-host-power-supply.yaml#
+
 required:
   - compatible
   - reg
@@ -75,4 +80,9 @@ examples:
             "perst",        /* PCIe reset (input) */
             "post-complete", /* POST complete (input) */
             "btn-state";    /* Button state (input) */
+
+        regulator-host-power {
+            compatible = "hpe,gxp-host-power-supply";
+            regulator-name = "host-power";
+        };
     };
