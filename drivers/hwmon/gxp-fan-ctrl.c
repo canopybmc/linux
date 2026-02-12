@@ -41,6 +41,13 @@ static int gxp_fan_read(struct device *dev, u32 attr, int channel, long *val)
 	unsigned int reg;
 
 	switch (attr) {
+	case hwmon_fan_input:
+		if (!fan_powered(drvdata)) {
+			*val = 0;
+			return 0;
+		}
+		*val = readb(drvdata->base + GXP_FAN_PWM_BASE + channel);
+		return 0;
 	case hwmon_fan_fault:
 		regmap_read(drvdata->xreg_map, XREG_FAN_FAIL_ID, &reg);
 		*val = !!(reg & GENMASK(channel * 2 + 1, channel * 2));
@@ -122,7 +129,7 @@ static umode_t gxp_fan_ctrl_is_visible(const void *_data,
 
 	switch (type) {
 	case hwmon_fan:
-		if (attr == hwmon_fan_fault)
+		if (attr == hwmon_fan_input || attr == hwmon_fan_fault)
 			return 0444;
 		break;
 	case hwmon_pwm:
@@ -148,10 +155,14 @@ static const struct hwmon_ops gxp_fan_ctrl_ops = {
 
 static const struct hwmon_channel_info * const gxp_fan_ctrl_info[] = {
 	HWMON_CHANNEL_INFO(fan,
-			   HWMON_F_FAULT, HWMON_F_FAULT,
-			   HWMON_F_FAULT, HWMON_F_FAULT,
-			   HWMON_F_FAULT, HWMON_F_FAULT,
-			   HWMON_F_FAULT, HWMON_F_FAULT),
+			   HWMON_F_INPUT | HWMON_F_FAULT,
+			   HWMON_F_INPUT | HWMON_F_FAULT,
+			   HWMON_F_INPUT | HWMON_F_FAULT,
+			   HWMON_F_INPUT | HWMON_F_FAULT,
+			   HWMON_F_INPUT | HWMON_F_FAULT,
+			   HWMON_F_INPUT | HWMON_F_FAULT,
+			   HWMON_F_INPUT | HWMON_F_FAULT,
+			   HWMON_F_INPUT | HWMON_F_FAULT),
 	HWMON_CHANNEL_INFO(pwm,
 			   HWMON_PWM_INPUT | HWMON_PWM_ENABLE,
 			   HWMON_PWM_INPUT | HWMON_PWM_ENABLE,
