@@ -203,6 +203,11 @@
 				interrupts = <12>;
 				interrupt-parent = <&vic0>;
 			};
+
+			host_power: regulator-host-power {
+				compatible = "hpe,gxp-host-power-supply";
+				regulator-name = "host-power";
+			};
 		};
 
 		espi: espi@80fe0000 {
@@ -524,7 +529,7 @@
 			compatible = "hpe,gxp-fan-ctrl";
 			reg = <0xc1000c00 0x200>;
 			hpe,xreg = <&xreg>;
-			hpe,fn2 = <&fn2>;
+			fan-supply = <&host_power>;
 		};
 
 		spifi1: spi@c0000280 {
