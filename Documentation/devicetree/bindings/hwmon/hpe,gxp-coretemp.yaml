@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/hwmon/hpe,gxp-coretemp.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: HPE GXP SoC Core Temperature Sensor
+
+maintainers:
+  - Marcello Sylvester Bauer <marcello.bauer@9elements.com>
+
+description: |
+  The HPE GXP SoC includes an internal temperature sensor that measures the
+  die temperature of the BMC processor.
+
+properties:
+  compatible:
+    const: hpe,gxp-coretemp
+
+  reg:
+    maxItems: 1
+    description: Temperature sensor registers
+
+required:
+  - compatible
+  - reg
+
+additionalProperties: false
+
+examples:
+  - |
+    coretemp@c0000130 {
+      compatible = "hpe,gxp-coretemp";
+      reg = <0xc0000130 0x8>;
+    };
