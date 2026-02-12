@@ -17,6 +17,22 @@ config PECI_ASPEED
 	  This driver can also be built as a module. If so, the module will
 	  be called peci-aspeed.
 
+config PECI_GXP
+	tristate "HPE GXP PECI support"
+	depends on ARCH_HPE_GXP || COMPILE_TEST
+	depends on OF
+	depends on HAS_IOMEM
+	help
+	  This option enables PECI controller driver for the HPE GXP BMC
+	  SoC. It allows the BMC to discover devices connected to it and
+	  communicate with them using PECI protocol.
+
+	  Say Y here if your system runs on HPE GXP SoC and you are using
+	  it as BMC for Intel platform.
+
+	  This driver can also be built as a module. If so, the module will
+	  be called peci-gxp.
+
 config PECI_NPCM
 	tristate "Nuvoton NPCM PECI support"
 	depends on ARCH_NPCM || COMPILE_TEST
