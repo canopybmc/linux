@@ -460,7 +460,7 @@ static int gxp_power_ctrl_probe(struct platform_device *pdev)
 						gxp_power_ctrl_pgood_irq,
 						IRQF_TRIGGER_RISING |
 						IRQF_TRIGGER_FALLING |
-						IRQF_ONESHOT,
+						IRQF_ONESHOT | IRQF_SHARED,
 						"gxp-power-ctrl-pgood", pctrl);
 		if (ret < 0)
 			dev_warn(dev, "failed to request pgood irq: %d\n", ret);
