@@ -12,6 +12,7 @@
 #include <linux/io.h>
 #include <linux/mfd/syscon.h>
 #include <linux/module.h>
+#include <linux/panic_notifier.h>
 #include <linux/mod_devicetable.h>
 #include <linux/platform_device.h>
 #include <linux/property.h>
@@ -25,6 +26,7 @@ struct gxp_fan_ctrl_drvdata {
 	void __iomem		*base;
 	struct regmap		*xreg_map;
 	struct regulator	*fan_supply;
+	struct notifier_block	panic_nb;
 	u8			fan_present;
 	u8			pwm_shutdown;
 };
@@ -194,6 +196,24 @@ static void gxp_fan_ctrl_restore_pwm(void *data)
 	}
 }
 
+static int gxp_fan_ctrl_panic(struct notifier_block *nb,
+			      unsigned long event, void *unused)
+{
+	struct gxp_fan_ctrl_drvdata *drvdata =
+		container_of(nb, struct gxp_fan_ctrl_drvdata, panic_nb);
+
+	gxp_fan_ctrl_restore_pwm(drvdata);
+	return NOTIFY_DONE;
+}
+
+static void gxp_fan_ctrl_unregister_panic(void *data)
+{
+	struct gxp_fan_ctrl_drvdata *drvdata = data;
+
+	atomic_notifier_chain_unregister(&panic_notifier_list,
+					 &drvdata->panic_nb);
+}
+
 static int gxp_fan_ctrl_probe(struct platform_device *pdev)
 {
 	struct gxp_fan_ctrl_drvdata *drvdata;
@@ -241,6 +261,17 @@ static int gxp_fan_ctrl_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, drvdata);
 
 	ret = devm_add_action_or_reset(dev, gxp_fan_ctrl_restore_pwm,
+				       drvdata);
+	if (ret)
+		return ret;
+
+	drvdata->panic_nb.notifier_call = gxp_fan_ctrl_panic;
+	ret = atomic_notifier_chain_register(&panic_notifier_list,
+					     &drvdata->panic_nb);
+	if (ret)
+		return ret;
+
+	ret = devm_add_action_or_reset(dev, gxp_fan_ctrl_unregister_panic,
 				       drvdata);
 	if (ret)
 		return ret;
