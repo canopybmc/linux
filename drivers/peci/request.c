@@ -122,11 +122,18 @@ int peci_request_status(struct peci_request *req)
 	case PECI_CC_PARITY_ERR_GPSB_OR_PMSB_IERR:
 	case PECI_CC_PARITY_ERR_GPSB_OR_PMSB_MCA:
 		return -EIO;
+	default:
+		/*
+		 * Unrecognized completion codes (e.g. 0x00 timeout or
+		 * command byte echo-back) are transient conditions that
+		 * can occur during host power transitions. Treat them
+		 * as retry-able so the exponential backoff in
+		 * peci_request_xfer_retry() can recover.
+		 */
+		dev_dbg(&req->device->dev,
+			"unknown completion code: %#02x\n", cc);
+		return -EAGAIN;
 	}
-
-	WARN_ONCE(1, "Unknown PECI completion code: %#02x\n", cc);
-
-	return -EIO;
 }
 EXPORT_SYMBOL_NS_GPL(peci_request_status, "PECI");
 
