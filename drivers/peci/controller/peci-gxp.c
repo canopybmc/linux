@@ -15,6 +15,7 @@
 #include <linux/peci.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
+#include <linux/workqueue.h>
 
 /* PECI registers */
 #define GXP_PECI_CMD		0x00
@@ -41,6 +42,9 @@ struct gxp_peci {
 	struct device *dev;
 	void __iomem *base;
 	struct regulator *peci_supply;
+	struct notifier_block reg_nb;
+	struct work_struct rescan_work;
+	struct work_struct remove_work;
 	int irq;
 	spinlock_t lock; /* protects completion status handling */
 	struct completion xfer_complete;
@@ -120,6 +124,43 @@ static irqreturn_t gxp_peci_irq_handler(int irq, void *arg)
 	return IRQ_HANDLED;
 }
 
+static void gxp_peci_rescan_work_fn(struct work_struct *work)
+{
+	struct gxp_peci *priv = container_of(work, struct gxp_peci,
+					     rescan_work);
+
+	peci_controller_scan_devices(priv->controller);
+}
+
+static void gxp_peci_remove_work_fn(struct work_struct *work)
+{
+	struct gxp_peci *priv = container_of(work, struct gxp_peci,
+					     remove_work);
+
+	peci_controller_remove_devices(priv->controller);
+}
+
+static int gxp_peci_reg_event(struct notifier_block *nb,
+			      unsigned long event, void *data)
+{
+	struct gxp_peci *priv = container_of(nb, struct gxp_peci, reg_nb);
+
+	if (event & REGULATOR_EVENT_ENABLE)
+		schedule_work(&priv->rescan_work);
+	else if (event & REGULATOR_EVENT_DISABLE)
+		schedule_work(&priv->remove_work);
+
+	return NOTIFY_OK;
+}
+
+static void gxp_peci_cancel_work(void *data)
+{
+	struct gxp_peci *priv = data;
+
+	cancel_work_sync(&priv->rescan_work);
+	cancel_work_sync(&priv->remove_work);
+}
+
 static const struct peci_controller_ops gxp_peci_ops = {
 	.xfer = gxp_peci_xfer,
 };
@@ -168,6 +209,23 @@ static int gxp_peci_probe(struct platform_device *pdev)
 				     "failed to add gxp peci controller\n");
 
 	priv->controller = controller;
+
+	if (priv->peci_supply) {
+		INIT_WORK(&priv->rescan_work, gxp_peci_rescan_work_fn);
+		INIT_WORK(&priv->remove_work, gxp_peci_remove_work_fn);
+
+		ret = devm_add_action_or_reset(&pdev->dev,
+					       gxp_peci_cancel_work, priv);
+		if (ret)
+			return ret;
+
+		priv->reg_nb.notifier_call = gxp_peci_reg_event;
+		ret = devm_regulator_register_notifier(priv->peci_supply,
+						       &priv->reg_nb);
+		if (ret)
+			return dev_err_probe(&pdev->dev, ret,
+					     "failed to register regulator notifier\n");
+	}
 
 	return 0;
 }
