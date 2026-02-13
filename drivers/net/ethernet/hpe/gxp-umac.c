@@ -114,10 +114,10 @@ static int umac_ioctl(struct net_device *ndev, struct ifreq *ifr, int cmd)
 	return phy_mii_ioctl(ndev->phydev, ifr, cmd);
 }
 
-static void umac_set_mac_address(struct net_device *ndev, void *p_addr)
+static void umac_set_mac_address(struct net_device *ndev, const void *p_addr)
 {
 	struct umac_priv *umac = netdev_priv(ndev);
-	char *addr = (char *)p_addr;
+	const char *addr = p_addr;
 	unsigned int value;
 
 	value = addr[0] << 8 | addr[1];
