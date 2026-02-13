@@ -126,6 +126,4 @@ void peci_driver_unregister(struct peci_driver *driver);
 
 extern const struct device_type peci_controller_type;
 
-int peci_controller_scan_devices(struct peci_controller *controller);
-
 #endif /* __PECI_INTERNAL_H */

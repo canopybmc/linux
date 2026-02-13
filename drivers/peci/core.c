@@ -42,6 +42,7 @@ int peci_controller_scan_devices(struct peci_controller *controller)
 
 	return 0;
 }
+EXPORT_SYMBOL_NS_GPL(peci_controller_scan_devices, "PECI");
 
 static struct peci_controller *peci_controller_alloc(struct device *dev,
 						     const struct peci_controller_ops *ops)
@@ -84,6 +85,20 @@ static int unregister_child(struct device *dev, void *dummy)
 
 	return 0;
 }
+
+/**
+ * peci_controller_remove_devices() - remove all PECI devices on a controller
+ * @controller: PECI controller to remove devices from
+ *
+ * Remove all PECI devices currently registered on this controller. This is
+ * useful for controller drivers that need to tear down devices when the host
+ * powers off and re-scan when it powers back on.
+ */
+void peci_controller_remove_devices(struct peci_controller *controller)
+{
+	device_for_each_child_reverse(&controller->dev, NULL, unregister_child);
+}
+EXPORT_SYMBOL_NS_GPL(peci_controller_remove_devices, "PECI");
 
 static void unregister_controller(void *_controller)
 {

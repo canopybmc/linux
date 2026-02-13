@@ -49,6 +49,8 @@ struct peci_controller {
 
 struct peci_controller *devm_peci_controller_add(struct device *parent,
 						 const struct peci_controller_ops *ops);
+int peci_controller_scan_devices(struct peci_controller *controller);
+void peci_controller_remove_devices(struct peci_controller *controller);
 
 static inline struct peci_controller *to_peci_controller(void *d)
 {
