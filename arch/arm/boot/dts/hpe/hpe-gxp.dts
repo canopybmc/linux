@@ -4,6 +4,9 @@
  */
 
 /dts-v1/;
+
+#include <dt-bindings/interrupt-controller/irq.h>
+
 / {
 	model = "Hewlett Packard Enterprise GXP BMC";
 	compatible = "hpe,gxp";
@@ -207,6 +210,7 @@
 			host_power: regulator-host-power {
 				compatible = "hpe,gxp-host-power-supply";
 				regulator-name = "host-power";
+				interrupts = <1 IRQ_TYPE_EDGE_BOTH>;
 			};
 		};
 
