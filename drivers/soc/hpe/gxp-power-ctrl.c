@@ -316,8 +316,8 @@ static irqreturn_t gxp_power_ctrl_pgood_irq(int irq, void *data)
 	if (pgood <= 0) {
 		/* PGOOD fell: host powered off, hold boot gate */
 		gxp_power_ctrl_shutdown_ack(pctrl);
-		dev_info(pctrl->gc.parent,
-			 "PGOOD deasserted, boot gate held\n");
+		dev_dbg(pctrl->gc.parent,
+			"PGOOD deasserted, boot gate held\n");
 	}
 
 	/* Forward event to power-ctrl-good virtual GPIO consumers */
