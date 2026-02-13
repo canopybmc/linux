@@ -151,7 +151,8 @@ static ssize_t sideband_sel_show(struct device *dev,
 
 	regmap_read(drvdata->xreg_map, XREG_PSU_SIDEBAND, &value);
 
-	return sysfs_emit(buf, "0x%02x\n", value & XREG_PSU_SIDEBAND_MASK);
+	return sysfs_emit(buf, "0x%02x\n",
+			  (unsigned int)(value & XREG_PSU_SIDEBAND_MASK));
 }
 
 static ssize_t sideband_sel_store(struct device *dev,
