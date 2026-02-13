@@ -312,7 +312,6 @@ static ssize_t chif_write(struct file *file, const char __user *buf,
 	int fifo_idx;
 	u32 desc_idx;
 	int timeout;
-	u8 dummy[4096];
 
 	if (channel != CHANNEL_SHAREMEM) {
 		dev_err(drvdata->dev, "channel %d not supported\n", channel);
@@ -380,9 +379,8 @@ static ssize_t chif_write(struct file *file, const char __user *buf,
 	}
 	recv_fifo[fifo_idx].consumed = 1;
 
-	/* Dummy read to ensure write to shared memory completes */
-	memcpy(dummy, &recv_fifo[fifo_idx], sizeof(struct chif_fifo_entry));
-	memcpy(dummy, &recv_desc[desc_idx], round_len);
+	/* Ensure writes to shared memory are visible before doorbell */
+	dma_wmb();
 
 	if (p_ccb->doorbell_base)
 		regmap_write(drvdata->fn2_map, REG_OUTDOOR, 1 << channel);
