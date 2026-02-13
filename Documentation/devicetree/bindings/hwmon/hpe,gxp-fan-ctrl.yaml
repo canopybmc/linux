@@ -33,6 +33,15 @@ properties:
   fan-supply:
     description: Phandle to host power supply regulator for power gating
 
+  fan-shutdown-percent:
+    description:
+      PWM duty cycle percentage to set on all present fans during kernel
+      shutdown or driver removal. Prevents fans from running at a low
+      duty cycle set by userspace if the BMC reboots while the host is
+      under load. If unset, defaults to 50 percent.
+    minimum: 0
+    maximum: 100
+
 required:
   - compatible
   - reg
@@ -47,4 +56,5 @@ examples:
       reg = <0xc1000c00 0x200>;
       hpe,xreg = <&xreg>;
       fan-supply = <&host_power>;
+      fan-shutdown-percent = <50>;
     };
