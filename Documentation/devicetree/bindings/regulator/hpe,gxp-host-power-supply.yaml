@@ -26,6 +26,13 @@ properties:
 
   regulator-name: true
 
+  interrupts:
+    maxItems: 1
+    description:
+      PGOOD state change interrupt from the parent FN2 interrupt controller.
+      When provided, the regulator fires notifier events on host power
+      transitions.
+
 required:
   - compatible
 
@@ -33,12 +40,16 @@ unevaluatedProperties: false
 
 examples:
   - |
+    #include <dt-bindings/interrupt-controller/irq.h>
     syscon@80200000 {
       compatible = "hpe,gxp-fn2", "simple-mfd", "syscon";
       reg = <0x80200000 0x100000>;
+      interrupt-controller;
+      #interrupt-cells = <2>;
 
       regulator-host-power {
         compatible = "hpe,gxp-host-power-supply";
         regulator-name = "host-power";
+        interrupts = <1 IRQ_TYPE_EDGE_BOTH>;
       };
     };
