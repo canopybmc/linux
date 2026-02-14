@@ -20,6 +20,7 @@ static void peci_controller_dev_release(struct device *dev)
 {
 	struct peci_controller *controller = to_peci_controller(dev);
 
+	mutex_destroy(&controller->scan_lock);
 	mutex_destroy(&controller->bus_lock);
 	ida_free(&peci_controller_ida, controller->id);
 	kfree(controller);
@@ -71,6 +72,7 @@ static struct peci_controller *peci_controller_alloc(struct device *dev,
 	device_initialize(&controller->dev);
 
 	mutex_init(&controller->bus_lock);
+	mutex_init(&controller->scan_lock);
 
 	return controller;
 

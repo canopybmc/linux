@@ -44,6 +44,7 @@ struct peci_controller {
 	struct device dev;
 	const struct peci_controller_ops *ops;
 	struct mutex bus_lock; /* held for the duration of xfer */
+	struct mutex scan_lock; /* serializes device creation/removal */
 	u8 id;
 };
 
