@@ -21,10 +21,14 @@
 #include <linux/regmap.h>
 #include <linux/regulator/driver.h>
 #include <linux/soc/hpe/gxp-regs.h>
+#include <linux/workqueue.h>
+
+#define GXP_CPLD_PGOOD_DEBOUNCE_MS	500
 
 struct gxp_cpld_reg_data {
 	struct regulator_dev *rdev;
 	struct regmap *regmap;
+	struct delayed_work pgood_work;
 };
 
 /* No-op: CPLD controls the power rail, not software */
@@ -48,15 +52,17 @@ static const struct regulator_desc gxp_cpld_reg_desc = {
 	.enable_mask = FN2_SEVSTAT_PGOOD_STATE,
 };
 
-static irqreturn_t gxp_cpld_reg_pgood_irq(int irq, void *data)
+static void gxp_cpld_reg_pgood_work_fn(struct work_struct *work)
 {
-	struct gxp_cpld_reg_data *priv = data;
+	struct gxp_cpld_reg_data *priv = container_of(work,
+						      struct gxp_cpld_reg_data,
+						      pgood_work.work);
 	unsigned int val;
 	int ret;
 
 	ret = regmap_read(priv->regmap, FN2_SEVSTAT, &val);
 	if (ret)
-		return IRQ_NONE;
+		return;
 
 	if (val & FN2_SEVSTAT_PGOOD_STATE)
 		regulator_notifier_call_chain(priv->rdev,
@@ -64,8 +70,23 @@ static irqreturn_t gxp_cpld_reg_pgood_irq(int irq, void *data)
 	else
 		regulator_notifier_call_chain(priv->rdev,
 					      REGULATOR_EVENT_DISABLE, NULL);
+}
+
+static irqreturn_t gxp_cpld_reg_pgood_irq(int irq, void *data)
+{
+	struct gxp_cpld_reg_data *priv = data;
+
+	mod_delayed_work(system_wq, &priv->pgood_work,
+			 msecs_to_jiffies(GXP_CPLD_PGOOD_DEBOUNCE_MS));
 
 	return IRQ_HANDLED;
+}
+
+static void gxp_cpld_reg_cancel_work(void *data)
+{
+	struct gxp_cpld_reg_data *priv = data;
+
+	cancel_delayed_work_sync(&priv->pgood_work);
 }
 
 static int gxp_cpld_reg_probe(struct platform_device *pdev)
@@ -97,6 +118,14 @@ static int gxp_cpld_reg_probe(struct platform_device *pdev)
 
 	irq = platform_get_irq_optional(pdev, 0);
 	if (irq > 0) {
+		INIT_DELAYED_WORK(&priv->pgood_work,
+				  gxp_cpld_reg_pgood_work_fn);
+
+		ret = devm_add_action_or_reset(&pdev->dev,
+					       gxp_cpld_reg_cancel_work, priv);
+		if (ret)
+			return ret;
+
 		ret = devm_request_threaded_irq(&pdev->dev, irq, NULL,
 						gxp_cpld_reg_pgood_irq,
 						IRQF_ONESHOT | IRQF_SHARED,
