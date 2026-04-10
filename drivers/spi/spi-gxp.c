@@ -77,9 +77,11 @@ static int gxp_spi_read_reg(struct gxp_spi_chip *chip, const struct spi_mem_op *
 	value |= (chip->cs << 24);
 	value &= ~(0x07 << 16);
 	value &= ~(0x1f << 19);
+	value |= (op->addr.nbytes << 16);
+	value |= ((op->dummy.nbytes * 8) << 19);
 	writel(value, reg_base + OFFSET_SPIMCFG);
 
-	writel(0, reg_base + OFFSET_SPIADDR);
+	writel(op->addr.val, reg_base + OFFSET_SPIADDR);
 
 	writeb(op->cmd.opcode, reg_base + OFFSET_SPICMD);
 
@@ -117,7 +119,7 @@ static int gxp_spi_write_reg(struct gxp_spi_chip *chip, const struct spi_mem_op 
 	value &= ~(0x1f << 19);
 	writel(value, reg_base + OFFSET_SPIMCFG);
 
-	writel(0, reg_base + OFFSET_SPIADDR);
+	writel(op->addr.val, reg_base + OFFSET_SPIADDR);
 
 	writeb(op->cmd.opcode, reg_base + OFFSET_SPICMD);
 
@@ -144,6 +146,9 @@ static ssize_t gxp_spi_read(struct gxp_spi_chip *chip, const struct spi_mem_op *
 {
 	struct gxp_spi *spifi = chip->spifi;
 	u32 offset = op->addr.val;
+
+	if (op->dummy.nbytes)
+		return gxp_spi_read_reg(chip, op);
 
 	if (chip->cs == 0)
 		offset += 0x4000000;
