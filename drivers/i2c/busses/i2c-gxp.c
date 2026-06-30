@@ -141,9 +141,11 @@ static int gxp_i2c_master_xfer(struct i2c_adapter *adapter,
 static u32 gxp_i2c_func(struct i2c_adapter *adap)
 {
 	if (IS_ENABLED(CONFIG_I2C_SLAVE))
-		return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL | I2C_FUNC_SLAVE;
+		return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL |
+		       I2C_FUNC_SMBUS_READ_BLOCK_DATA | I2C_FUNC_SLAVE;
 
-	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL;
+	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL |
+	       I2C_FUNC_SMBUS_READ_BLOCK_DATA;
 }
 
 #if IS_ENABLED(CONFIG_I2C_SLAVE)
@@ -244,7 +246,8 @@ static void gxp_i2c_chk_addr_ack(struct gxp_i2c_drvdata *drvdata)
 		}
 		drvdata->state = GXP_I2C_RDATA_PHASE;
 
-		if (drvdata->buf_remaining == 1) {
+		if (drvdata->buf_remaining == 1 &&
+		    !(drvdata->curr_msg->flags & I2C_M_RECV_LEN)) {
 			/* The last data, do not ack */
 			writeb(MASTER_EVT_CLR | RW_CMD,
 			       drvdata->base + GXP_I2CMCMD);
@@ -282,6 +285,14 @@ static void gxp_i2c_ack_data(struct gxp_i2c_drvdata *drvdata)
 	*drvdata->buf = value;
 	drvdata->buf++;
 	drvdata->buf_remaining--;
+
+	if (drvdata->curr_msg->flags & I2C_M_RECV_LEN) {
+		drvdata->curr_msg->flags &= ~I2C_M_RECV_LEN;
+		if (value > I2C_SMBUS_BLOCK_MAX)
+			value = I2C_SMBUS_BLOCK_MAX;
+		drvdata->curr_msg->len += value;
+		drvdata->buf_remaining += value;
+	}
 
 	if (drvdata->buf_remaining == 0) {
 		/* No more data, this message is completed. */
