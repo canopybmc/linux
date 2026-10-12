@@ -97,6 +97,14 @@ config MDIO_GPIO
 	  To compile this driver as a module, choose M here: the module
 	  will be called mdio-gpio.
 
+config MDIO_GXP_UMAC
+	tristate "HPE GXP UMAC MDIO bus controller"
+	depends on ARCH_HPE || COMPILE_TEST
+	depends on OF_MDIO && HAS_IOMEM
+	help
+	  This module provides a driver for the MDIO bus controller found
+	  in the HPE GXP SoC.
+
 config MDIO_HISI_FEMAC
 	tristate "Hisilicon FEMAC MDIO bus controller"
 	depends on HAS_IOMEM && OF_MDIO
